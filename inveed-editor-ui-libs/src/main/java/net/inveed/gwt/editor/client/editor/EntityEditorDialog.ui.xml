@@ -1,0 +1,12 @@
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+	xmlns:g="urn:import:com.google.gwt.user.client.ui" 
+	xmlns:b="urn:import:org.gwtbootstrap3.client.ui">
+
+	<b:Modal ui:field="modal" b:id="modal" closable="true" fade="true" dataBackdrop="STATIC" dataKeyboard="true" width="60%">
+		<b:ModalBody ui:field="content" />
+		<b:ModalFooter>
+			<b:Button ui:field="btnOk" type="PRIMARY">Save</b:Button>
+			<b:Button ui:field="btnCancel" type="DANGER" dataDismiss="MODAL">Close</b:Button>
+		</b:ModalFooter>
+	</b:Modal>
+</ui:UiBinder>
