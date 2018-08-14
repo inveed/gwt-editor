@@ -1,13 +1,15 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <artifactId>inveed-editor-shared-libs</artifactId>
-  
-  <parent>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<artifactId>inveed-editor-shared-libs</artifactId>
+
+	<parent>
 		<groupId>net.inveed</groupId>
 		<artifactId>inveed-editor-root</artifactId>
 		<version>0.0.2-SNAPSHOT</version>
 	</parent>
-	
+
 
 	<build>
 		<plugins>
@@ -19,31 +21,52 @@
 					<target>1.8</target>
 				</configuration>
 			</plugin>
-			
-			<!--  
 			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-dependency-plugin</artifactId>
-				<version>2.5.1</version>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>gwt-maven-plugin</artifactId>
+				<version>2.8.2</version>
 				<executions>
 					<execution>
-						<id>copy-dependencies</id>
-						<phase>package</phase>
 						<goals>
-							<goal>copy-dependencies</goal>
+							<goal>compile</goal>
+							<goal>test</goal>
+							<goal>resources</goal>
 						</goals>
 						<configuration>
-							<excludeScope>provided</excludeScope>
-							<outputDirectory>${project.build.directory}/lib</outputDirectory>
-							<overWriteReleases>true</overWriteReleases>
-							<overWriteSnapshots>true</overWriteSnapshots>
-							<overWriteIfNewer>true</overWriteIfNewer>
-							<useRepositoryLayout>false</useRepositoryLayout>
+							<mode>htmlunit</mode>
+							<testTimeOut>240</testTimeOut>
+							<failOnError>true</failOnError>
 						</configuration>
 					</execution>
 				</executions>
 			</plugin>
-			-->
+			<plugin>
+				<groupId>org.eclipse.m2e</groupId>
+				<artifactId>lifecycle-mapping</artifactId>
+				<version>1.0.0</version>
+				<configuration>
+					<lifecycleMappingMetadata>
+						<pluginExecutions>
+							<pluginExecution>
+								<pluginExecutionFilter>
+									<groupId>org.codehaus.mojo</groupId>
+									<artifactId>gwt-maven-plugin</artifactId>
+									<versionRange>[0,)</versionRange>
+									<goals>
+										<goal>resources</goal>
+										<goal>i18n</goal>
+										<goal>generateAsync</goal>
+										<goal>css</goal>
+									</goals>
+								</pluginExecutionFilter>
+								<action>
+									<execute />
+								</action>
+							</pluginExecution>
+						</pluginExecutions>
+					</lifecycleMappingMetadata>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
 	<dependencies>
