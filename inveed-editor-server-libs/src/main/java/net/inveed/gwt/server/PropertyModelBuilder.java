@@ -16,13 +16,13 @@ import javax.persistence.OneToMany;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-import net.inveed.typeutils.BeanPropertyDesc;
-import net.inveed.typeutils.BeanTypeDesc;
-import net.inveed.typeutils.EnumTypeDesc;
-import net.inveed.typeutils.JavaTypeDesc;
-import net.inveed.typeutils.JavaTypeRegistry;
-import net.inveed.typeutils.ListTypeDesc;
-import net.inveed.typeutils.NativeTypeDesc;
+import net.inveed.commons.reflection.BeanPropertyDesc;
+import net.inveed.commons.reflection.BeanTypeDesc;
+import net.inveed.commons.reflection.EnumTypeDesc;
+import net.inveed.commons.reflection.JavaTypeDesc;
+import net.inveed.commons.reflection.JavaTypeRegistry;
+import net.inveed.commons.reflection.ListTypeDesc;
+import net.inveed.commons.reflection.NativeTypeDesc;
 import net.inveed.gwt.editor.shared.FieldType;
 import net.inveed.gwt.editor.shared.FormViewAttributesDTO;
 import net.inveed.gwt.editor.shared.ListViewAttributesDTO;

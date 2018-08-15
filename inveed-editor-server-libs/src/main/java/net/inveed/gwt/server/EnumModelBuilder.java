@@ -3,7 +3,7 @@ package net.inveed.gwt.server;
 import java.util.HashMap;
 import java.util.Map;
 
-import net.inveed.typeutils.EnumTypeDesc;
+import net.inveed.commons.reflection.EnumTypeDesc;
 import net.inveed.gwt.editor.shared.EnumModelDTO;
 
 public class EnumModelBuilder {
