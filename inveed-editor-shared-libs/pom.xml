@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>net.inveed</groupId>
 		<artifactId>inveed-editor-root</artifactId>
-		<version>0.0.4</version>
+		<version>0.0.5-SNAPSHOT</version>
 	</parent>
 
 
