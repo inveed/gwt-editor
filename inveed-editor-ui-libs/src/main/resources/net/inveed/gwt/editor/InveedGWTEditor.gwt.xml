@@ -1,8 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- When updating your version of GWT, you should also update this DTD reference, 
-	so that your app can take advantage of the latest GWT module capabilities. -->
-<!DOCTYPE module PUBLIC "-//Google Inc.//DTD Google Web Toolkit 2.8.0//EN"
-  "http://gwtproject.org/doctype/2.8.0/gwt-module.dtd">
 <module rename-to='InveedGWTEditor'>
 	<!-- Inherit the core Web Toolkit stuff. -->
 	<inherits name='com.google.gwt.user.User' />
@@ -12,21 +8,20 @@
 	<inherits name="com.google.gwt.logging.Logging" />
 	
 	<inherits name="com.github.nmorel.gwtjackson.GwtJackson" />
-	
 	<inherits name="net.inveed.gwt.editor.InveedGWTEditorShared" />
-
+	<inherits name="net.inveed.gwt.editor.InveedGWTEditorClientLibs" />
+	<inherits name="net.inveed.gwt.editor.InveedGWTEditorCommons" />
+	
+	<inherits name="gwt.material.design.GwtMaterialBasicWithJQuery" />
+	<inherits name="gwt.material.design.jquery.JQuery" />
+	<inherits name="gwt.material.design.addins.GwtMaterialAddins" />
+	<inherits name="gwt.material.design.GwtMaterialTable" />
+	
+	<inherits name="com.github.nmorel.gwtjackson.GwtJackson" />
+	
+	<!--  <inherits name="gwt.material.design.themes.ThemeGreenResources"/> -->
+	
 	<inherits name="com.googlecode.gwt.crypto.Crypto" />
-
-	<inherits name="org.gwtbootstrap3.GwtBootstrap3" />
-	<inherits name="org.gwtbootstrap3.extras.respond.Respond" />
-	<inherits name="org.gwtbootstrap3.extras.bootbox.Bootbox" />
-	<inherits name="org.gwtbootstrap3.extras.notify.Notify" />
-	<inherits
-		name="org.gwtbootstrap3.extras.toggleswitch.ToggleSwitch" />
-	<inherits
-		name="org.gwtbootstrap3.extras.datepicker.DatePicker" />
-	<inherits name="org.gwtbootstrap3.extras.select.Select" />
-
 	<source path='client' />
 
 	<!-- allow Super Dev Mode -->

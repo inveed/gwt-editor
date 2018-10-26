@@ -5,14 +5,13 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import com.google.gwt.user.client.ui.Composite;
-import com.google.gwt.user.client.ui.Widget;
 
 import net.inveed.gwt.editor.client.jsonrpc.JsonRPCTransaction;
 import net.inveed.gwt.editor.client.model.JSEntity;
-import net.inveed.gwt.editor.client.model.properties.IPropertyDesc;
+import net.inveed.gwt.editor.client.model.properties.IPropertyDescriptor;
 import net.inveed.gwt.editor.client.types.IJSObject;
 
-public abstract class AbstractPropertyEditor<P extends IPropertyDesc<V>, V extends IJSObject> extends Composite {
+public abstract class AbstractPropertyEditor<P extends IPropertyDescriptor<V>, V extends IJSObject> extends Composite {
 	public static interface ValueChangeListener {
 		void onValueChanged();
 	}
@@ -24,7 +23,7 @@ public abstract class AbstractPropertyEditor<P extends IPropertyDesc<V>, V exten
 	private String viewName;
 	private JSEntity entity;
 	
-	private V originalValue;
+	private V initialValue;
 	
 	private String propertyName;
 	
@@ -38,7 +37,7 @@ public abstract class AbstractPropertyEditor<P extends IPropertyDesc<V>, V exten
 		if (this.property != null) {
 			this.bind(entity, this.property, viewName);
 		} else if (this.propertyName != null && entity != null) {
-			IPropertyDesc<?> property = entity.getModel().findProperty(this.propertyName);
+			IPropertyDescriptor<?> property = entity.getModel().getPropertyDescriptor(this.propertyName);
 			if (property == null) {
 				LOG.severe("Cannot find property '" + this.propertyName + "' in entity model '" + entity.getModel().getEntityName() + "'");
 				return;
@@ -51,7 +50,7 @@ public abstract class AbstractPropertyEditor<P extends IPropertyDesc<V>, V exten
 	}
 	
 	@SuppressWarnings("unchecked")
-	public void bindGeneric(JSEntity entity, IPropertyDesc<?> property, String viewName) {
+	public void bindGeneric(JSEntity entity, IPropertyDescriptor<?> property, String viewName) {
 		this.bind(entity, (P) property, viewName);
 	}
 
@@ -64,22 +63,23 @@ public abstract class AbstractPropertyEditor<P extends IPropertyDesc<V>, V exten
 		this.entity = entity;
 		this.viewName = viewName;
 		
-		this.originalValue = property.getRawValue(entity);
+		this.initialValue = property.getValue(entity);
 		
-		if (property.isRequired() && originalValue == null && entity.getID() == null) {
+		if (property.isRequired() && initialValue == null && entity.getID() == null) {
 			LOG.info("Required property for new object with null value – doing editable");
 			this.readonly = false;
-		}
-		else {
+		} else if (!this.readonly){
 			this.readonly = property.isReadonly(this.isNewEntity());
 		}
 	}
 	
-	protected void add(Widget w) {
-		this.initWidget(w);
+	protected void setInitialValue() {
+		if (isNewEntity() && this.getProperty().getDefaultValue() != null) {
+			this.setValue(this.getProperty().getDefaultValue());
+		} else if (this.getInitialValue() != null) {
+			this.setValue(this.getInitialValue());
+		}
 	}
-
-	protected abstract Widget getChildWidget();
 		
 	public String getDisplayName() {
 		return this.getProperty().getDisplayName(this.getViewName());
@@ -100,6 +100,10 @@ public abstract class AbstractPropertyEditor<P extends IPropertyDesc<V>, V exten
 	public boolean isReadonly() {
 		return this.readonly;
 	}
+	
+	public void setReadonly(boolean v) {
+		this.readonly = v;
+	}
 
 	public boolean isNewEntity() {
 		return (this.entity == null? true : this.entity.getID() == null);
@@ -115,12 +119,12 @@ public abstract class AbstractPropertyEditor<P extends IPropertyDesc<V>, V exten
 		}
 		
 		V v = this.getValue();
-		if (this.originalValue == null && v == null) {
+		if (this.initialValue == null && v == null) {
 			LOG.fine("Property " + this.getProperty().getName() + " was NOT changed – NULL value");
 			return false;
 		}
-		if (this.originalValue != null && v != null) {
-			boolean ret = !this.originalValue.isEquals(v);
+		if (this.initialValue != null && v != null) {
+			boolean ret = !this.initialValue.isEquals(v);
 			if (ret) {
 				LOG.fine("Property " + this.getProperty().getName() + " was changed");
 			} else {
@@ -146,12 +150,13 @@ public abstract class AbstractPropertyEditor<P extends IPropertyDesc<V>, V exten
 		this.valueChangeListeners.add(l);
 	}
 	
-	protected V getOriginalValue() {
-		return originalValue;
+	protected V getInitialValue() {
+		return initialValue;
 	}
 	
 	public abstract V getValue();
-	public abstract void setValue(String v);
+	public abstract void setValue(V value);
+
 	public abstract boolean validate();
 
 	public String getPropertyName() {

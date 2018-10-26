@@ -1,9 +1,18 @@
 package net.inveed.gwt.server;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Modifier;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.JoinColumns;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
@@ -11,34 +20,51 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 import net.inveed.commons.reflection.BeanPropertyDesc;
 import net.inveed.commons.reflection.BeanTypeDesc;
-import net.inveed.gwt.editor.shared.EntityEditorDTO;
-import net.inveed.gwt.editor.shared.EntityEditorsDTO;
+import net.inveed.commons.reflection.JavaTypeDesc;
+import net.inveed.commons.reflection.JavaTypeRegistry;
 import net.inveed.gwt.editor.shared.EntityModelDTO;
-import net.inveed.gwt.editor.shared.PropertyModelDTO;
+import net.inveed.gwt.editor.shared.forms.panels.AutoFormViewDTO;
+import net.inveed.gwt.editor.shared.lists.ListViewDTO;
+import net.inveed.gwt.editor.shared.properties.AbstractPropertyDTO;
 import net.inveed.gwt.server.annotations.JsonRPCServiceRef;
+import net.inveed.gwt.server.annotations.UIAsName;
 import net.inveed.gwt.server.annotations.UILinkedEntity;
 import net.inveed.gwt.server.annotations.UILinkedEntityCreateArg;
-import net.inveed.gwt.server.annotations.editor.UIEditor;
-import net.inveed.gwt.server.annotations.editor.UIEditorSection;
-import net.inveed.gwt.server.annotations.editor.UIEditorPanel;
-import net.inveed.gwt.server.annotations.editor.UIEditors;
+import net.inveed.gwt.server.annotations.UIListView;
+import net.inveed.gwt.server.annotations.UIListViewFieldCollection;
+import net.inveed.gwt.server.annotations.UIPropertyAnnotation;
+
+import net.inveed.gwt.server.annotations.editor.UIEditorField;
+import net.inveed.gwt.server.annotations.properties.UIBooleanProperty;
+import net.inveed.gwt.server.annotations.properties.UIDateTimeProperty;
+import net.inveed.gwt.server.annotations.properties.UIEnumProperty;
+import net.inveed.gwt.server.annotations.properties.UIIdProperty;
+import net.inveed.gwt.server.annotations.properties.UILinkedListProperty;
+import net.inveed.gwt.server.annotations.properties.UINumberProperty;
+import net.inveed.gwt.server.annotations.properties.UIObjectRefProperty;
+import net.inveed.gwt.server.annotations.properties.UITextProperty;
+import net.inveed.gwt.server.editors.AutoFormBuilder;
+import net.inveed.gwt.server.propbuilders.IPropertyBuiler;
 import net.inveed.rest.jpa.annotations.TypeDescriminator;
 import net.inveed.rest.jpa.annotations.TypeDescriminatorField;
 import net.inveed.rest.jpa.typeutils.EntityTypeExt;
 
 public class EntityModelBuilder {
-	private final BeanTypeDesc<?> bean;
+	public final BeanTypeDesc<?> bean;
 	
-	public String entityName;
-	public String typeDescriminator;
-	public String superType;
 	public boolean isAbstract;
-	public String typeDescriminatorField;
+	public String  entityName;
+	public String  superType;
+	public String  typeDescriminator;
+	public String  typeDescriminatorField;
 	public boolean typeOnUpdate;
 	
-	public EntityAccessServiceBuilder service = new EntityAccessServiceBuilder();
-	public Map<String, PropertyModelBuilder> properties = new HashMap<>();
-	public Map<String, EntityEditorBuilder> editors = new HashMap<>();
+	public EntityAccessServiceBuilder 			service = new EntityAccessServiceBuilder();
+	
+	public Map<String, IPropertyBuiler<?>>  	propertyBuilders = new HashMap<>();
+	public Map<String, EntityListViewBuilder> 	listViewBuilders = new HashMap<>();
+	
+	private AutoFormBuilder				editorsBuilder;
 	
 	public static EntityModelDTO build(BeanTypeDesc<?> bean) {
 		EntityModelBuilder bld = new EntityModelBuilder(bean);
@@ -55,28 +81,172 @@ public class EntityModelBuilder {
 			return null;
 		}
 		
-		Map<String, PropertyModelDTO> flds = new HashMap<>();
-		for (String k : this.properties.keySet()) {
-			PropertyModelBuilder fb = this.properties.get(k);
-			PropertyModelDTO fm = fb.build();
-			if (fm == null) {
+		Map<String, AbstractPropertyDTO> properties = new HashMap<>();
+		for (String k : this.propertyBuilders.keySet()) {
+			IPropertyBuiler<?> pb = this.propertyBuilders.get(k);
+			AbstractPropertyDTO dto = pb.build();
+			if (dto == null) {
 				//TODO: Warn!
 				continue;
 			}
-			flds.put(k, fm);
+			properties.put(k, dto);
 		}
-		EntityEditorsDTO ees = null;
-		if (this.editors.size() > 0) {
-			Map<String, EntityEditorDTO> eedtoMap = new HashMap<>();
-			for (String k : this.editors.keySet()) {
-				EntityEditorDTO eedto = this.editors.get(k).build();
-				eedtoMap.put(k, eedto);
+		
+		Map<String, AutoFormViewDTO> editors = editorsBuilder.build(this);
+		
+		Map<String, ListViewDTO> listViews = null;
+		if (this.listViewBuilders.size() > 0) {
+			listViews = new HashMap<>();
+			for (String k : this.listViewBuilders.keySet()) {
+				ListViewDTO eedto = this.listViewBuilders.get(k).build();
+				listViews.put(k, eedto);
 			}
-			ees = new EntityEditorsDTO(eedtoMap);
 		}
-		return new EntityModelDTO(this.entityName, this.typeDescriminator, this.superType, this.isAbstract, typeDescriminatorField, this.typeOnUpdate, service.build(), ees, flds);
+	
+		return new EntityModelDTO(
+				this.entityName, 
+				this.superType,
+				this.isAbstract,
+				this.typeDescriminator,
+				typeDescriminatorField,
+				this.typeOnUpdate,
+				service.build(),
+				editors,
+				listViews,
+				properties);
 	}
 	
+	private static Class<? extends Annotation> determinePropertyType(BeanPropertyDesc prop) {
+		if (prop.getAnnotation(JsonIgnore.class) != null) {
+			return null;
+		}
+		if (prop.getAnnotation(UIEditorField.class) == null 
+				&& prop.getAnnotation(UIListView.class) == null
+				&& prop.getAnnotation(UIAsName.class) == null) {
+			// Not marked for UI.
+			return null;
+		}
+		
+		if (prop.getAnnotation(Id.class) != null) {
+			return UIIdProperty.class;
+		}
+		Class<?> c = prop.getType().getType();
+		if (List.class.isAssignableFrom(c)) {
+			if (prop.getAnnotation(OneToMany.class) != null) {
+				return UILinkedListProperty.class;
+			}
+		}
+		if (c == String.class) {
+			return UITextProperty.class;
+		} else if (c == boolean.class || c == Boolean.class) {
+			return UIBooleanProperty.class;
+		} else if (c.isEnum()) {
+			return UIEnumProperty.class;
+		} else if (c.isPrimitive() 
+				|| c == Integer.class 
+				|| c == Long.class 
+				|| c == Short.class 
+				|| c == Byte.class 
+				|| c == Character.class 
+				|| c == Float.class 
+				|| c == Double.class) {
+			return UINumberProperty.class;
+		} else if (c == Date.class || c == java.sql.Date.class) {
+			return UIDateTimeProperty.class;
+		}
+		
+		if (prop.getAnnotation(JoinColumn.class) != null
+				|| prop.getAnnotation(JoinColumns.class) != null
+				|| prop.getAnnotation(OneToMany.class) != null) {
+			return UIObjectRefProperty.class;
+		}
+		if (prop.getAnnotation(ManyToOne.class) != null) {
+			return UIObjectRefProperty.class;
+		}
+		
+		return null;
+	}
+	
+	public static IPropertyBuiler<?> getBuilder(BeanPropertyDesc prop) {
+		if (prop.getAnnotation(JsonIgnore.class) != null) {
+			return null;
+		}
+
+		List<Annotation> annotatedAnnotations = prop.getAnnotatedAnnotations(UIPropertyAnnotation.class);
+		if (annotatedAnnotations == null) {
+			return null;
+		}
+		Annotation propAnnotation = null;
+		Class<? extends Annotation> annotationClass = null;
+		
+		if (annotatedAnnotations.size() == 0) {
+			annotationClass = determinePropertyType(prop);
+			if (annotationClass == null) {
+				return null;
+			}
+		} else {
+			if (annotatedAnnotations.size() != 1) {
+				//TODO: LOG
+			}
+			propAnnotation = annotatedAnnotations.get(0);
+			annotationClass = propAnnotation.annotationType();
+		}
+		UIPropertyAnnotation aa = annotationClass.getAnnotation(UIPropertyAnnotation.class);
+		if (aa == null) {
+			//TODO: log вообще хрень какая-то
+			return null;
+		}
+		String impl = aa.implementor();
+		try {
+			Class<?> implClass = Class.forName(impl);
+			if (!IPropertyBuiler.class.isAssignableFrom(implClass)) {
+				//TODO: log
+				return null;
+			}
+			return (IPropertyBuiler<?>) implClass.newInstance();
+		} catch (ClassNotFoundException e) {
+			//TODO: LOG
+			return null;
+		} catch (InstantiationException e) {
+			//TODO: LOG
+			return null;
+		} catch (IllegalAccessException e) {
+			//TODO: LOG
+			return null;
+		}
+	}
+	
+	private void parseLists() {
+		for (BeanPropertyDesc prop : bean.getProperties()) {
+			HashMap<String, UIListView> lvmap = new HashMap<>();
+			UIListViewFieldCollection lvas = prop.getAnnotation(UIListViewFieldCollection.class);
+			if (lvas != null) {
+				for (UIListView lv : lvas.value()) {
+					lvmap.put(lv.name(), lv);
+				}
+			}
+			UIListView lva = prop.getAnnotation(UIListView.class);
+			if (lva != null) {
+				lvmap.put(lva.name(), lva);
+			}
+			
+			IPropertyBuiler<?> builder = getBuilder(prop);
+			if (builder == null) {
+				//TODO: LOG
+				continue;
+			}
+			
+			builder.prepare(prop);
+			
+			for (String k : lvmap.keySet()) {
+				if (!this.listViewBuilders.containsKey(k)) {
+					EntityListViewBuilder b = new EntityListViewBuilder();
+					this.listViewBuilders.put(k, b);
+				}
+				this.listViewBuilders.get(k).registerProperty(builder, lvmap.get(k));
+			}
+		}
+	}
 	private void parseProperties() {
 		Collection<BeanPropertyDesc> props = null;
 		if (this.superType != null) {
@@ -84,68 +254,16 @@ public class EntityModelBuilder {
 		} else {
 			props = bean.getProperties();
 		}
+		
 		for (BeanPropertyDesc prop : props) {
-			if (prop.getAnnotation(JsonIgnore.class) != null) {
+			IPropertyBuiler<?> builder = getBuilder(prop);
+			if (builder == null) {
+				//TODO: LOG
 				continue;
 			}
-			PropertyModelBuilder f = PropertyModelBuilder.build(prop);
-			if (f != null) {
-				this.properties.put(f.getName(), f);
-			}
 			
-			UIEditorSection fca = prop.getAnnotation(UIEditorSection.class);
-			if (fca != null) {
-				EntityEditorBuilder eeb = this.getEntityEditorBuilder(fca.viewName());
-				if (eeb != null) {
-					eeb.registerAnnotation(fca);
-				}
-			}
-			
-			UIEditorPanel tca = prop.getAnnotation(UIEditorPanel.class);
-			if (tca != null) {
-				EntityEditorBuilder eeb = this.getEntityEditorBuilder(tca.viewName());
-				if (eeb != null) {
-					eeb.registerAnnotation(tca);
-				}
-			}
-		}
-	}
-	
-	private EntityEditorBuilder getEntityEditorBuilder(String view) {
-		if (view == null) {
-			return null;
-		}
-		view = view.trim();
-		if (view.length() < 1) {
-			return null;
-		}
-		EntityEditorBuilder ret = this.editors.get(view);
-		if (ret == null) {
-			ret = new EntityEditorBuilder();
-			this.editors.put(view, ret);
-		}
-		return ret;
-
-	}
-	
-	private void parseEditors() {
-		HashMap<String, UIEditor> m =new HashMap<>();
-		
-		UIEditors eas = bean.getAnnotation(UIEditors.class);
-		if (eas != null) {
-			for (UIEditor e : eas.value()) {
-				m.put(e.viewName(), e);
-			}
-		}
-		UIEditor ea = bean.getAnnotation(UIEditor.class);
-		if (ea != null) {
-			m.put(ea.viewName(), ea);
-		}
-		
-		for (String k : m.keySet()) {
-			UIEditor e = m.get(k);
-			EntityEditorBuilder eb = this.getEntityEditorBuilder(k);
-			eb.registerAnnotation(e);
+			builder.prepare(prop);
+			this.propertyBuilders.put(builder.getPropertyName(), builder);
 		}
 	}
 	
@@ -179,6 +297,7 @@ public class EntityModelBuilder {
 	private void parse() {
 		
 		this.parseSupertype();
+		
 		this.parseProperties();
 		
 		JsonRPCServiceRef srefa = bean.getAnnotation(JsonRPCServiceRef.class);
@@ -228,8 +347,24 @@ public class EntityModelBuilder {
 			}
 		}
 		
-		this.entityName = PropertyModelBuilder.getEntityName(this.bean.getType());
+		this.entityName = getEntityName(this.bean.getType());
 		this.isAbstract = Modifier.isAbstract(this.bean.getType().getModifiers());
-		this.parseEditors();
+		
+		this.editorsBuilder = new AutoFormBuilder(this.bean);
+		
+		this.parseLists();
+	}
+	
+	public static final String getEntityName(Class<?> type) {
+        JavaTypeDesc<?> t = JavaTypeRegistry.getType(type);
+        return getEntityName(t);
+	}
+	@SuppressWarnings("unchecked")
+	public static final String getEntityName(JavaTypeDesc<?> t) {
+        EntityTypeExt<?> e = t.getExtension(EntityTypeExt.class);
+        if (e != null) {
+                return e.getEntityName();
+        }
+        return t.getType().getSimpleName();
 	}
 }

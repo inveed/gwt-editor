@@ -5,15 +5,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
-import org.gwtbootstrap3.extras.select.client.ui.Option;
-import org.gwtbootstrap3.extras.select.client.ui.Select;
-
 import com.google.gwt.event.logical.shared.ValueChangeEvent;
 import com.google.gwt.event.logical.shared.ValueChangeHandler;
 import com.google.gwt.json.client.JSONValue;
 import com.google.gwt.user.client.ui.Widget;
 
+import gwt.material.design.addins.client.combobox.MaterialComboBox;
+import gwt.material.design.client.constants.FieldType;
+import gwt.material.design.client.ui.html.Span;
+import gwt.material.design.client.ui.table.cell.Column;
+import gwt.material.design.client.ui.table.cell.WidgetColumn;
+import net.inveed.gwt.editor.client.IColumnFactory;
+import net.inveed.gwt.editor.client.IPropertyEditorFactory;
 import net.inveed.gwt.editor.client.ProgressBarController;
+import net.inveed.gwt.editor.client.editor.EntityListView.ListViewColumn;
 import net.inveed.gwt.editor.client.model.EntityModel;
 import net.inveed.gwt.editor.client.model.JSEntity;
 import net.inveed.gwt.editor.client.model.properties.EntityReferencePropertyModel;
@@ -21,49 +26,88 @@ import net.inveed.gwt.editor.client.types.IJSObject;
 import net.inveed.gwt.editor.client.types.JSEntityList;
 import net.inveed.gwt.editor.client.utils.IError;
 import net.inveed.gwt.editor.client.utils.Promise;
+import net.inveed.gwt.editor.shared.forms.EditorFieldDTO;
 
 public class EntityRefListBoxSelector extends AbstractFormPropertyEditor<EntityReferencePropertyModel, JSEntity> {
 	private static final Logger LOG = Logger.getLogger(EntityRefListBoxSelector.class.getName());
-	private Select listBox;
+	public static final IPropertyEditorFactory<EntityReferencePropertyModel> createEditorFactory() {
+		return new IPropertyEditorFactory<EntityReferencePropertyModel>() {
+			@Override
+			public AbstractFormPropertyEditor<EntityReferencePropertyModel, ?> createEditor(EntityReferencePropertyModel property, EditorFieldDTO dto) {
+				return new EntityRefListBoxSelector();
+			}};
+	}
+	
+	public static final IColumnFactory<?> createColumnFactory() {
+		return new IColumnFactory<EntityReferencePropertyModel>() {
+			
+			@Override
+			public Column<JSEntity, ?> createListViewColumn(ListViewColumn<EntityReferencePropertyModel> col) {
+				WidgetColumn<JSEntity, Widget> ret = new WidgetColumn<JSEntity, Widget>() {
+
+					@Override
+					public Widget getValue(JSEntity row) {
+						Span ret = new Span();
+						JSEntity v = col.getPropertyDescriptor().getValue(row);
+						if (v == null) {
+							if (col.getPropertyDescriptor().getNotSetText() == null) {
+								ret.setText("-- NOT SET --");
+							} else {
+								ret.setText(col.getPropertyDescriptor().getNotSetText());
+							}
+							return ret;
+						}
+						if (v.isInitialized()) {
+							ret.setText(v.getDisplayValue());
+							return ret;
+						}
+						Promise<Void, IError> p = v.load();
+						p.thenApply((o)->{
+							ret.setText(v.getDisplayValue());
+							return null;
+						});
+						p.onError((e,t)->{
+							ret.setText("|ERROR LOADING ENTITY|");
+							return null;
+						});
+						return ret;
+					}
+				};
+				return ret;
+			}
+		};
+	}
+	
+	private MaterialComboBox<JSEntity> listBox;
 	
 	private JSEntity value;
 	private EntityModel targetEntity;
-	
-	private HashMap<String, JSEntity> idToEntityMap = new HashMap<>();
-	
+		
 	public EntityRefListBoxSelector() {
-		this.listBox = new Select();
-		this.listBox.addValueChangeHandler(new ValueChangeHandler<String>() {
+		this.listBox = new MaterialComboBox<>();
+		this.listBox.setFieldType(FieldType.OUTLINED);
+		this.listBox.addValueChangeHandler(new ValueChangeHandler<List<JSEntity>>() {
 			
 			@Override
-			public void onValueChange(ValueChangeEvent<String> event) {
+			public void onValueChange(ValueChangeEvent<List<JSEntity>> event) {
 				onValueChanged();
 			}
 		});
-		this.add(this.listBox);
+		this.initWidget(this.listBox);
 	}
+	
 	public  void bind(JSEntity entity, EntityReferencePropertyModel field, String viewName) {
 		super.bind(entity, field, viewName);
 		this.targetEntity = field.getTargetEntityModel();
 		this.listBox.setEnabled(!this.isReadonly());
+		this.listBox.setLabel(this.getDisplayName());
 		
 		if (this.isReadonly()) {
 			this.setReadonlyOriginalValue();
 		} else {
 			this.fill();
 		}
-	}
-	
-	@Override
-	public void setId(String uid) {
-		this.listBox.setId(uid);
-	}
-		
-	@Override
-	protected Widget getChildWidget() {
-		return this.listBox;
-	}
-	
+	}	
 	
 	private Map<String, JSONValue> buildListFilters() {
 		if (this.getProperty().getFilters() == null) {
@@ -107,7 +151,8 @@ public class EntityRefListBoxSelector extends AbstractFormPropertyEditor<EntityR
 	
 	@Override
 	public boolean validate() {
-		if (this.getProperty().isRequired() && this.listBox.getSelectedItem() == null) {
+		JSEntity selected = this.listBox.getSingleValue();
+		if (this.getProperty().isRequired() && selected == null) {
 			return false;
 		}
 		return true;
@@ -115,17 +160,21 @@ public class EntityRefListBoxSelector extends AbstractFormPropertyEditor<EntityR
 	
 	private void fill() {
 		this.listBox.setEnabled(false);
+		
 		if (!this.getProperty().isRequired()) {
-			Option o = new Option();
-			o.setText("-- NOT SET --");
-			o.setValue("");
-			this.listBox.add(o);
+			if (this.getProperty().getNotSetText() != null) {
+				this.listBox.addItem(this.getProperty().getNotSetText(), JSEntity.EMPTY);
+			} else {
+				this.listBox.addItem("--- NOT SET ---", JSEntity.EMPTY);
+			}
+			
 		}
-
+		
 		Promise<JSEntityList, IError> result = this.getEntity().getEntityManager().listEntities(this.targetEntity, 0, Integer.MAX_VALUE, this.buildListFilters());
 		ProgressBarController.INSTANCE.add(result);
 	
 		result.thenApply((JSEntityList v) -> {
+			int idx = this.getProperty().isRequired() ? 0 : 1;
 			try {
 				LOG.fine("Got selection response");
 				if (v == null) {
@@ -133,10 +182,9 @@ public class EntityRefListBoxSelector extends AbstractFormPropertyEditor<EntityR
 					return null;
 				}
 				List<JSEntity> list = v.getValue();
-				this.idToEntityMap.clear();
 				IJSObject origId = null;
-				if (this.getOriginalValue() != null) {
-					origId = this.getOriginalValue().getID();
+				if (this.getInitialValue() != null) {
+					origId = this.getInitialValue().getID();
 				}
 				for (int j = 0; j < list.size(); j++){
 					JSEntity entity = list.get(j);
@@ -147,26 +195,20 @@ public class EntityRefListBoxSelector extends AbstractFormPropertyEditor<EntityR
 						//TODO: error
 						continue;
 					}
-					String stringOid = oid.toString();
 					String oname = entity.getDisplayValue();
-	
 					
 					LOG.fine("Adding item: " + oid + " / " + oname);
-					Option o = new Option();
-					o.setValue(stringOid);
-					o.setText(oname);
-					listBox.add(o);
-					this.idToEntityMap.put(stringOid, entity);
+					this.listBox.addItem(oname, entity);
 					if (origId != null) {
 						if (origId.isEquals(oid)) {
-							o.setSelected(true);
+							this.listBox.setSelectedIndex(idx);
 						}
 					}
+					idx++;
 				}
 				this.listBox.setEnabled(!this.isReadonly());
 				
 				this.onValueChanged();
-				//this.listBox.setReadOnly(this.isReadonly());
 				return null;
 			} finally {
 				ProgressBarController.INSTANCE.remove(result);
@@ -181,40 +223,30 @@ public class EntityRefListBoxSelector extends AbstractFormPropertyEditor<EntityR
 	
 	private void setReadonlyOriginalValue() {
 		this.listBox.setEnabled(false);
-		JSEntity ov = this.getOriginalValue();
+		JSEntity ov = this.getInitialValue();
 		if (ov == null) {
 			return;
 		}
 		if (ov.isInitialized()) {
-			Option o = new Option();
-			o.setValue("");
-			o.setText(ov.getDisplayValue());
-			o.setSelected(true);
-			this.listBox.add(o);
+			this.listBox.addItem(ov.getDisplayValue(), ov);
+			this.listBox.setSelectedIndex(0);
 		} else {
 			Promise<Void, IError> p = ov.load();
 			p.thenApply((v)->{
-				listBox.setEnabled(true);
-				Option o = new Option();
-				o.setValue("");
-				o.setText(ov.getDisplayValue());
-				o.setSelected(true);
-				listBox.add(o);
-				listBox.setEnabled(false);
+				this.listBox.setEnabled(true);
+				this.listBox.addItem(ov.getDisplayValue(), ov);
+				this.listBox.setSelectedIndex(0);
+				this.listBox.setEnabled(false);
 				return null;
 			});
 			p.onError((v, e)->{
-				listBox.setEnabled(true);
-				Option o = new Option();
-				o.setValue("");
-				o.setText("CANNOT LOAD ENTITY");
-				o.setSelected(true);
-				listBox.add(o);
-				listBox.setEnabled(false);
+				this.listBox.setEnabled(true);
+				this.listBox.addItem("CANNOT LOAD ENTITY", ov);
+				this.listBox.setSelectedIndex(0);
+				this.listBox.setEnabled(false);
 				return null;
 			});
 		}
-		
 	}
 
 	@Override
@@ -229,33 +261,22 @@ public class EntityRefListBoxSelector extends AbstractFormPropertyEditor<EntityR
 	
 	private void updateCurrentValue() {
 		LOG.fine("Value changed");
-		Option sopt = this.listBox.getSelectedItem();
+		JSEntity entity = this.listBox.getSingleValue();
 		
-		if (sopt == null) {
+		if (entity == null || !entity.isValid()) {
 			LOG.fine("Current value is null");
 			this.value = null;
 		} else {
-			JSEntity entity = this.idToEntityMap.get(sopt.getValue());
-		
-			if (entity == null) {
-				LOG.fine("Current value is null");
-				this.value = null;
-			} else {
-				LOG.fine("Current value ID is " + entity.toString());
-				this.value = entity;
-			}
+			LOG.fine("Current value ID is " + entity.toString());
+			this.value = entity;
 		}
 	}
 	
 	@Override
-	public void setValue(String value) {
-		for (int i = 0 ; i < this.listBox.getItemCount(); i++) {
-			Option o = this.listBox.getItem(i);
-			if (o.getValue().equals(value)) {
-				o.setSelected(true);
-			} else {
-				o.setSelected(false);
-			}
+	public void setValue(JSEntity value) {
+		int idx = this.listBox.getValueIndex(value);
+		if (idx > 0 ) {
+			this.listBox.setSelectedIndex(idx);
 		}
 	}
 
@@ -266,5 +287,10 @@ public class EntityRefListBoxSelector extends AbstractFormPropertyEditor<EntityR
 	@Override
 	public void setEnabled(boolean value) {
 		this.listBox.setEnabled(value);
+	}
+	
+	@Override
+	public void setGrid(String grid) {
+		this.listBox.setGrid(grid);
 	}
 }

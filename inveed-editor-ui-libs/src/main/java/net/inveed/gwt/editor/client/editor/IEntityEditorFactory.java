@@ -1,7 +1,8 @@
 package net.inveed.gwt.editor.client.editor;
 
-import net.inveed.gwt.editor.client.model.EntityFormView;
+import net.inveed.gwt.editor.client.model.EntityModel;
 
 public interface IEntityEditorFactory {
-	public AbstractEntityEditorForm create(EntityFormView view);
+	public AbstractEntityEditorForm create(String viewName);
+	boolean reopenAfterCreate(String createView, String editView, EntityModel model);
 }

@@ -7,6 +7,11 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+
+import net.inveed.gwt.editor.shared.forms.panels.AutoFormViewDTO;
+import net.inveed.gwt.editor.shared.lists.ListViewDTO;
+import net.inveed.gwt.editor.shared.properties.AbstractPropertyDTO;
+
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 
 @JsonAutoDetect(fieldVisibility = Visibility.PUBLIC_ONLY, getterVisibility = Visibility.NONE, setterVisibility = Visibility.NONE) 
@@ -27,7 +32,8 @@ public class EntityModelDTO implements Serializable {
 	static final String P_TYPE_DESC_FLD = "typeDescriminatorField";
 	static final String P_TYPE_ON_UPDATE = "typeOnUpdate";
 	static final String P_SERVICE = "service";
-	static final String P_EDITORS = "editors";
+	static final String P_FVIEWS = "formViews";
+	static final String P_LVIEWS = "listViews";
 	static final String P_PROPS = "properties";
 	
 	@JsonProperty(P_NAME)
@@ -57,32 +63,38 @@ public class EntityModelDTO implements Serializable {
 	@JsonInclude(JsonInclude.Include.NON_NULL)
 	public final EntityAccessServiceDTO service;
 	
-	@JsonProperty(P_EDITORS)
+	@JsonProperty(P_FVIEWS)
 	@JsonInclude(JsonInclude.Include.NON_NULL)
-	public final EntityEditorsDTO editors;
+	public final Map<String, AutoFormViewDTO> formViews;
+	
+	@JsonProperty(P_LVIEWS)
+	@JsonInclude(JsonInclude.Include.NON_NULL)
+	public final Map<String, ListViewDTO> listViews;
 	
 	@JsonProperty(P_PROPS)
 	@JsonInclude(JsonInclude.Include.NON_NULL)
-	public final Map<String, PropertyModelDTO> properties;
+	public final Map<String, AbstractPropertyDTO> properties;
 	
 	public EntityModelDTO(
 			@JsonProperty(P_NAME) String entityName,
-			@JsonProperty(P_TYPE_DESC) String typeDescriminator,
 			@JsonProperty(P_SUPERTYPE) String superType,
 			@JsonProperty(P_ISABSTRACT) boolean isAbstract,
+			@JsonProperty(P_TYPE_DESC) String typeDescriminator,
 			@JsonProperty(P_TYPE_DESC_FLD) String typeDescriminatorField,
 			@JsonProperty(P_TYPE_ON_UPDATE) boolean typeOnUpdate,
 			@JsonProperty(P_SERVICE) EntityAccessServiceDTO service,
-			@JsonProperty(P_EDITORS) EntityEditorsDTO editors,
-			@JsonProperty(P_PROPS) Map<String, PropertyModelDTO> properties) {
+			@JsonProperty(P_FVIEWS) Map<String, AutoFormViewDTO> formViews,
+			@JsonProperty(P_LVIEWS) Map<String, ListViewDTO> listViews,
+			@JsonProperty(P_PROPS) Map<String, AbstractPropertyDTO> properties) {
 		this.name = entityName;
-		this.typeDescriminator = typeDescriminator;
 		this.superType = superType;
 		this.isAbstract = isAbstract;
+		this.typeDescriminator = typeDescriminator;
 		this.typeDescriminatorField = typeDescriminatorField;
 		this.typeOnUpdate = typeOnUpdate;
 		this.service = service;
+		this.formViews = formViews;
+		this.listViews = listViews;
 		this.properties = properties;
-		this.editors = editors;
 	}
 }

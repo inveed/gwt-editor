@@ -3,6 +3,8 @@ package net.inveed.gwt.editor.client;
 
 import java.util.HashMap;
 
+import gwt.material.design.client.ui.MaterialLoader;
+
 public class ProgressBarController {
 	private final HashMap<Object, Boolean> loadingMap = new HashMap<>();
 	
@@ -23,14 +25,10 @@ public class ProgressBarController {
 	}
 	
 	private void showProgressBar() {
-		//TODO: implement
-		//MaterialLoader.showProgress(true);
-		//MaterialLoader.loading(true);
+		MaterialLoader.loading(true);
 	}
 	
 	private void hideProgressBar() {
-		//TODO: implement
-		//MaterialLoader.showProgress(false);
-		//MaterialLoader.loading(false);
+		MaterialLoader.loading(false);
 	}
 }

@@ -7,12 +7,10 @@
   	<artifactId>inveed-editor-root</artifactId>
   	<version>0.0.4-SNAPSHOT</version>
   </parent>
-  
   <dependencies>
   	<dependency>
   		<groupId>net.inveed</groupId>
-  		<artifactId>inveed-editor-shared-libs</artifactId>
+  		<artifactId>inveed-editor-commons</artifactId>
   	</dependency>
   </dependencies>
-  
 </project>

@@ -1,45 +1,45 @@
 package net.inveed.gwt.editor.client.editor.fields;
 
-import org.gwtbootstrap3.client.ui.html.Div;
-import org.gwtbootstrap3.client.ui.html.Text;
-
-import com.google.gwt.user.client.ui.Widget;
-
+import gwt.material.design.client.constants.FieldType;
+import gwt.material.design.client.ui.MaterialTextBox;
+import net.inveed.gwt.editor.client.IPropertyEditorFactory;
 import net.inveed.gwt.editor.client.model.JSEntity;
 import net.inveed.gwt.editor.client.model.properties.StringIDPropertyModel;
 import net.inveed.gwt.editor.client.types.JSString;
+import net.inveed.gwt.editor.shared.forms.EditorFieldDTO;
 
 public class StringIDField extends AbstractFormPropertyEditor<StringIDPropertyModel, JSString> {
 	
-	private Div textBox;
+	private MaterialTextBox textBox;
 	
 	public StringIDField() {
-		this.textBox = new Div();
-		this.add(this.textBox);
+		this.textBox = new MaterialTextBox();
+		this.textBox.setFieldType(FieldType.OUTLINED);
+		this.initWidget(this.textBox);
+	}
+	
+	public static final IPropertyEditorFactory<StringIDPropertyModel> createEditorFactory() {
+		return new IPropertyEditorFactory<StringIDPropertyModel>() {
+			@Override
+			public AbstractFormPropertyEditor<StringIDPropertyModel, ?> createEditor(StringIDPropertyModel property, EditorFieldDTO dto) {
+				return new StringIDField();
+			}};
 	}
 	
 	public void bind(JSEntity entity, StringIDPropertyModel field, String viewName) {
 		super.bind(entity, field, viewName);
+	
+		this.textBox.setLabel(this.getDisplayName());
 		
-		if (this.getOriginalValue() != null) {
-			this.setValue(this.getOriginalValue().getValue());
+		this.setInitialValue();
+	}
+		
+	@Override
+	public void setValue(JSString v) {
+		if (v == null) {
+			this.textBox.setValue(null);
 		}
-	}
-	
-	@Override
-	public void setId(String uid) {
-		this.textBox.setId(uid);
-	}
-	
-	@Override
-	protected Widget getChildWidget() {
-		return this.textBox;
-	}
-		
-	@Override
-	public void setValue(String v) {
-		this.textBox.clear();
-		this.textBox.add(new Text(v));
+		this.textBox.setValue(v.getValue());
 	}
 	
 	@Override
@@ -54,10 +54,15 @@ public class StringIDField extends AbstractFormPropertyEditor<StringIDPropertyMo
 
 	@Override
 	public JSString getValue() {
-		return this.getOriginalValue();
+		return this.getInitialValue();
 	}
 
 	@Override
 	public void setEnabled(boolean value) {
+	}
+	
+	@Override
+	public void setGrid(String grid) {
+		this.textBox.setGrid(grid);
 	}
 }

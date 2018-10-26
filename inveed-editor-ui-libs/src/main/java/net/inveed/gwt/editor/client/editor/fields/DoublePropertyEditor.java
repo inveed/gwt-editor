@@ -1,25 +1,34 @@
 package net.inveed.gwt.editor.client.editor.fields;
 
-import org.gwtbootstrap3.client.ui.DoubleBox;
-import org.gwtbootstrap3.client.ui.form.validator.DecimalMaxValidator;
-import org.gwtbootstrap3.client.ui.form.validator.DecimalMinValidator;
-
 import com.google.gwt.event.dom.client.KeyUpEvent;
 import com.google.gwt.event.dom.client.KeyUpHandler;
 import com.google.gwt.event.logical.shared.ValueChangeEvent;
 import com.google.gwt.event.logical.shared.ValueChangeHandler;
-import com.google.gwt.user.client.ui.Widget;
 
+import gwt.material.design.client.base.validator.DecimalMaxValidator;
+import gwt.material.design.client.base.validator.DecimalMinValidator;
+import gwt.material.design.client.constants.FieldType;
+import gwt.material.design.client.ui.MaterialDoubleBox;
+import net.inveed.gwt.editor.client.IPropertyEditorFactory;
 import net.inveed.gwt.editor.client.model.JSEntity;
 import net.inveed.gwt.editor.client.model.properties.FloatPropertyModel;
 import net.inveed.gwt.editor.client.types.JSDouble;
+import net.inveed.gwt.editor.shared.forms.EditorFieldDTO;
 
 public class DoublePropertyEditor extends AbstractFormPropertyEditor<FloatPropertyModel, JSDouble> {
+	public static final IPropertyEditorFactory<FloatPropertyModel> createEditorFactory() {
+		return new IPropertyEditorFactory<FloatPropertyModel>() {
+			@Override
+			public AbstractFormPropertyEditor<FloatPropertyModel, ?> createEditor(FloatPropertyModel property, EditorFieldDTO dto) {
+				return new DoublePropertyEditor();
+			}};
+	}
 	
-	private DoubleBox tbDouble;
+	private MaterialDoubleBox tbDouble;
 	
 	public DoublePropertyEditor() {
-		this.tbDouble = new DoubleBox();
+		this.tbDouble = new MaterialDoubleBox();
+		this.tbDouble.setFieldType(FieldType.OUTLINED);
 		this.tbDouble.addValueChangeHandler(new ValueChangeHandler<Double>() {
 			
 			@Override
@@ -33,34 +42,32 @@ public class DoublePropertyEditor extends AbstractFormPropertyEditor<FloatProper
 				onValueChanged();
 			}
 		});
-		this.add(this.tbDouble);
-	}
-	public void bind(JSEntity entity, FloatPropertyModel field, String viewName) {
-		super.bind(entity, field, viewName);
-		this.tbDouble.setReadOnly(this.isReadonly());
-		if (this.getProperty().getMaxValue() != null) {
-			this.tbDouble.addValidator(new DecimalMaxValidator<Double>(this.getProperty().getMaxValue()));
-		}
-		if (this.getProperty().getMinValue() != null) {
-			this.tbDouble.addValidator(new DecimalMinValidator<Double>(this.getProperty().getMinValue()));
-		}
 		
-		if (this.getOriginalValue() != null) {
-			this.tbDouble.setValue(this.getOriginalValue().getValue());
-		}
+		this.initWidget(this.tbDouble);
 	}
 	
-	@Override
-	protected Widget getChildWidget() {
-		return this.tbDouble;
+	public void bind(JSEntity entity, FloatPropertyModel field, String viewName) {
+		super.bind(entity, field, viewName);
+		
+		this.tbDouble.setReadOnly(this.isReadonly());
+		this.tbDouble.setLabel(this.getDisplayName());
+		
+		if (this.getProperty().getMaxValue() != null) {
+			this.tbDouble.addValidator(new DecimalMaxValidator<>(this.getProperty().getMaxValue()));
+		}
+		if (this.getProperty().getMinValue() != null) {
+			this.tbDouble.addValidator(new DecimalMinValidator<>(this.getProperty().getMinValue()));
+		}
+		
+		this.setInitialValue();
 	}
 
 	@Override
-	public void setValue(String v) {
-		if (v == null) {
-			return;
+	public void setValue(JSDouble v) {
+		if (v == null){
+			this.tbDouble.setValue(null);
 		}
-		this.tbDouble.setValue(Double.parseDouble(v));
+		this.tbDouble.setValue(v.getValue());
 	}
 	
 	@Override
@@ -98,20 +105,28 @@ public class DoublePropertyEditor extends AbstractFormPropertyEditor<FloatProper
 		if (this.isReadonly()) {
 			return false;
 		}
-		if (this.getOriginalValue() == null && this.tbDouble.getValue() == null) {
+		if (this.getInitialValue() == null && this.tbDouble.getValue() == null) {
 			return false;
 		}
-		if (this.getOriginalValue() != null && this.tbDouble.getValue() != null) {
-			return !this.getOriginalValue().equals(this.tbDouble.getValue());
+		if (this.getInitialValue() != null && this.tbDouble.getValue() != null) {
+			return !this.getInitialValue().equals(this.tbDouble.getValue());
 		}
 		return true;
 	}
-	@Override
-	public void setId(String uid) {
-		this.tbDouble.setId(uid);
-	}
+
 	@Override
 	public void setEnabled(boolean value) {
 		this.tbDouble.setEnabled(value);
+		if (!value) {
+			this.tbDouble.clearErrorText();
+			this.tbDouble.removeErrorModifiers();
+		} else {
+			this.tbDouble.validate();
+		}
+	}
+	
+	@Override
+	public void setGrid(String grid) {
+		this.tbDouble.setGrid(grid);
 	}
 }

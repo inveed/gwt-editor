@@ -1,38 +1,39 @@
 package net.inveed.gwt.editor.client.editor.fields;
 
-import org.gwtbootstrap3.client.ui.Input;
-import org.gwtbootstrap3.client.ui.TextArea;
-import org.gwtbootstrap3.client.ui.base.ValueBoxBase;
-import org.gwtbootstrap3.client.ui.form.validator.RegExValidator;
-import org.gwtbootstrap3.client.ui.form.validator.SizeValidator;
-
 import com.google.gwt.event.dom.client.KeyUpEvent;
 import com.google.gwt.event.dom.client.KeyUpHandler;
 import com.google.gwt.event.logical.shared.ValueChangeEvent;
 import com.google.gwt.event.logical.shared.ValueChangeHandler;
-import com.google.gwt.user.client.ui.Widget;
 
+import gwt.material.design.client.base.validator.RegExValidator;
+import gwt.material.design.client.base.validator.SizeValidator;
+import gwt.material.design.client.constants.FieldType;
+import gwt.material.design.client.ui.MaterialTextArea;
+import gwt.material.design.client.ui.MaterialTextBox;
+import gwt.material.design.client.ui.MaterialValueBox;
+import net.inveed.gwt.editor.client.IPropertyEditorFactory;
 import net.inveed.gwt.editor.client.model.JSEntity;
 import net.inveed.gwt.editor.client.model.properties.TextPropertyModel;
 import net.inveed.gwt.editor.client.types.JSString;
-import net.inveed.gwt.editor.client.utils.StringFormatter;
+import net.inveed.gwt.editor.shared.forms.EditorFieldDTO;
 
 public class SingleRowTextPropertyEditor extends AbstractFormPropertyEditor<TextPropertyModel, JSString> {
 	
-	private static final String ERR_LENGTH_BETWEEN = "txtLengthBetween";
-	private static final String ERR_LENGTH_MORETHAN = "txtLengthMore";
-	private static final String ERR_LENGTH_LESSTHAN = "txtLengthLess";
-	private static final String ERR_LENGTH_LESSTHAN_NOEMPTY = "txtLengthLessNoEmpty";
-	private ValueBoxBase<String> textBox;
+	//private static final String ERR_LENGTH_BETWEEN = "txtLengthBetween";
+	//private static final String ERR_LENGTH_MORETHAN = "txtLengthMore";
+	//private static final String ERR_LENGTH_LESSTHAN = "txtLengthLess";
+	//private static final String ERR_LENGTH_LESSTHAN_NOEMPTY = "txtLengthLessNoEmpty";
+	private  MaterialValueBox<String> textBox;
 	
 	public SingleRowTextPropertyEditor(boolean multiline) {
 		if (!multiline) {
-			this.textBox = new Input();
+			this.textBox = new MaterialTextBox();
 		} else {
-			this.textBox = new TextArea();
+			this.textBox = new MaterialTextArea();
 			
 		}
 		this.textBox.setValidateOnBlur(true);
+		this.textBox.setFieldType(FieldType.OUTLINED);
 		this.textBox.addValueChangeHandler(new ValueChangeHandler<String>() {
 			
 			@Override
@@ -48,22 +49,34 @@ public class SingleRowTextPropertyEditor extends AbstractFormPropertyEditor<Text
 			}
 		});
 		
-		this.add(this.textBox);
+		
+		this.initWidget(this.textBox);
 	}
 	
-	@Override
-	public void setId(String uid) {
-		this.textBox.setId(uid);
+	
+	public static final IPropertyEditorFactory<TextPropertyModel> createEditorFactory() {
+		return new IPropertyEditorFactory<TextPropertyModel>() {
+			@Override
+			public AbstractFormPropertyEditor<TextPropertyModel, ?> createEditor(TextPropertyModel property, EditorFieldDTO dto) {
+				return new SingleRowTextPropertyEditor(property.isMultiline());
+			}};
 	}
+	
+	
 	public  void bind(JSEntity entity, TextPropertyModel field, String viewName) {
 		super.bind(entity, field, viewName);
+		this.textBox.setLabel(this.getDisplayName());
 		this.textBox.setReadOnly(this.isReadonly());
-		String nregex = this.getProperty().getNativeRegex();
-		if (nregex != null) {
-			RegExValidator rv = new RegExValidator(nregex, this.getProperty().getNativeRegexError(this.getViewName()));
-			this.textBox.addValidator(rv);
+		
+		if (this.getProperty().getMinLength() != null || this.getProperty().getMaxLength() != null) {
+			this.textBox.addValidator(new SizeValidator<>(this.getProperty().getMinLength(), this.getProperty().getMaxLength()));
+		}
+
+		if (this.getProperty().getRegEx() != null) {
+			this.textBox.addValidator(new RegExValidator(this.getProperty().getRegEx(), this.getProperty().getRegexError(this.getViewName())));
 		}
 		
+		/*
 		String regex = this.getProperty().getRegEx();
 		if (regex != null) {
 			RegExValidator rv = new RegExValidator(regex, this.getProperty().getRegexError(this.getViewName()));
@@ -95,23 +108,17 @@ public class SingleRowTextPropertyEditor extends AbstractFormPropertyEditor<Text
 		if (this.getProperty().getMaxLength() != null) {
 			this.textBox.setMaxLength(this.getProperty().getMaxLength());
 		}
+		*/
 		
-		if (this.getOriginalValue() != null) {
-			this.textBox.setValue(this.getOriginalValue().getValue());
-		}
+		this.setInitialValue();
 	}
 	
 	@Override
-	protected Widget getChildWidget() {
-		return this.textBox;
-	}
-	
-	@Override
-	public void setValue(String v) {
+	public void setValue(JSString v) {
 		if (v == null) {
-			return;
+			this.textBox.setValue(null);
 		}
-		this.textBox.setValue(v);
+		this.textBox.setValue(v.getValue());
 	}
 	
 	
@@ -147,5 +154,16 @@ public class SingleRowTextPropertyEditor extends AbstractFormPropertyEditor<Text
 	@Override
 	public void setEnabled(boolean value) {
 		this.textBox.setEnabled(value);
+		if (!value) {
+			this.textBox.clearErrorText();
+			this.textBox.removeErrorModifiers();
+		} else {
+			this.textBox.validate();
+		}
+	}
+	
+	@Override
+	public void setGrid(String grid) {
+		this.textBox.setGrid(grid);
 	}
 }

@@ -7,17 +7,16 @@ import com.google.gwt.user.client.ui.Composite;
 
 import net.inveed.gwt.editor.client.editor.fields.AbstractPropertyEditor.ValueChangeListener;
 import net.inveed.gwt.editor.client.jsonrpc.JsonRPCTransaction;
-import net.inveed.gwt.editor.client.model.EntityFormView;
 import net.inveed.gwt.editor.client.model.JSEntity;
 
 public abstract class AbstractEntityEditorForm extends Composite {
-	private final EntityFormView view;
+	private final String viewName;
 	private JSEntity entity;
 	
 	private final List<ValueChangeListener> valueChangeListeners = new ArrayList<>();
 	
-	public AbstractEntityEditorForm(EntityFormView view) {
-		this.view = view;
+	public AbstractEntityEditorForm(String viewName) {
+		this.viewName = viewName;
 	}
 	
 	public final void bind(JSEntity entity) {
@@ -31,8 +30,8 @@ public abstract class AbstractEntityEditorForm extends Composite {
 		return this.entity;
 	}
 	
-	public EntityFormView getView() {
-		return this.view;
+	public String getViewName() {
+		return this.viewName;
 	}
 
 	public abstract void applyChanges();

@@ -1,4 +1,6 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<artifactId>inveed-editor-ui-libs</artifactId>
 	<packaging>jar</packaging>
@@ -72,24 +74,27 @@
 		</dependency>
 
 		<dependency>
-			<groupId>net.inveed</groupId>
-			<artifactId>inveed-editor-shared-libs</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.gwtbootstrap3</groupId>
-			<artifactId>gwtbootstrap3</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.gwtbootstrap3</groupId>
-			<artifactId>gwtbootstrap3-extras</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>com.googlecode.gwt-crypto</groupId>
-			<artifactId>gwt-crypto</artifactId>
-		</dependency>
-		<dependency>
 			<groupId>com.github.nmorel.gwtjackson</groupId>
 			<artifactId>gwt-jackson</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>net.inveed</groupId>
+			<artifactId>inveed-editor-client-libs</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.github.gwtmaterialdesign</groupId>
+			<artifactId>gwt-material</artifactId>
+			<version>2.1.1</version>
+		</dependency>
+		<dependency>
+			<groupId>com.github.gwtmaterialdesign</groupId>
+			<artifactId>gwt-material-addins</artifactId>
+			<version>2.1.1</version>
+		</dependency>
+		<dependency>
+			<groupId>com.github.gwtmaterialdesign</groupId>
+			<artifactId>gwt-material-table</artifactId>
+			<version>2.1.1</version>
 		</dependency>
 	</dependencies>
 </project>

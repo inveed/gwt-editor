@@ -5,13 +5,12 @@ import java.util.List;
 
 import net.inveed.gwt.editor.client.editor.fields.AbstractPropertyEditor;
 import net.inveed.gwt.editor.client.jsonrpc.JsonRPCTransaction;
-import net.inveed.gwt.editor.client.model.EntityFormView;
 
 public abstract class CustomEntityEditorForm extends AbstractEntityEditorForm {
 	private List<AbstractPropertyEditor<?, ?>> fields;
 
-	public CustomEntityEditorForm(EntityFormView view) {
-		super(view);
+	public CustomEntityEditorForm(String viewName) {
+		super(viewName);
 		this.fields = new ArrayList<>();
 	}
 	
@@ -22,7 +21,7 @@ public abstract class CustomEntityEditorForm extends AbstractEntityEditorForm {
 	@Override
 	protected void bind() {
 		for (AbstractPropertyEditor<?, ?> fld : this.fields) {
-			fld.bind(this.getEntity(), this.getView().getName());
+			fld.bind(this.getEntity(), this.getViewName());
 		}
 	}
 	

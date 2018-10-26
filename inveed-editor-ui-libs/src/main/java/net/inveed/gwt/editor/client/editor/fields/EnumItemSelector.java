@@ -1,36 +1,83 @@
 package net.inveed.gwt.editor.client.editor.fields;
 
-import org.gwtbootstrap3.extras.select.client.ui.Option;
-import org.gwtbootstrap3.extras.select.client.ui.Select;
-
 import com.google.gwt.event.logical.shared.ValueChangeEvent;
 import com.google.gwt.event.logical.shared.ValueChangeHandler;
-import com.google.gwt.user.client.ui.Widget;
 
+import gwt.material.design.client.constants.FieldType;
+import gwt.material.design.client.ui.MaterialListBox;
+import gwt.material.design.client.ui.html.Option;
+import gwt.material.design.client.ui.table.cell.Column;
+import gwt.material.design.client.ui.table.cell.TextColumn;
+import net.inveed.gwt.editor.client.IColumnFactory;
+import net.inveed.gwt.editor.client.IPropertyEditorFactory;
+import net.inveed.gwt.editor.client.editor.EntityListView.ListViewColumn;
+import net.inveed.gwt.editor.client.model.EnumModel;
+import net.inveed.gwt.editor.client.model.EnumModel.JSEnumValue;
 import net.inveed.gwt.editor.client.model.JSEntity;
 import net.inveed.gwt.editor.client.model.properties.EnumPropertyModel;
-import net.inveed.gwt.editor.client.types.enums.EnumModel;
-import net.inveed.gwt.editor.client.types.enums.EnumModel.JSEnumValue;
+import net.inveed.gwt.editor.client.types.IJSObject;
+import net.inveed.gwt.editor.shared.forms.EditorFieldDTO;
 
 public class EnumItemSelector extends AbstractFormPropertyEditor<EnumPropertyModel, JSEnumValue> {
-	//private static final Logger LOG = Logger.getLogger(EnumItemSelector.class.getName());
-
-	private Select list;
+	public static final IPropertyEditorFactory<EnumPropertyModel> createEditorFactory() {
+		return new IPropertyEditorFactory<EnumPropertyModel>() {
+			@Override
+			public AbstractFormPropertyEditor<EnumPropertyModel, ?> createEditor(EnumPropertyModel property, EditorFieldDTO dto) {
+				return new EnumItemSelector();
+			}};
+	}
+	
+	public static final IColumnFactory<?> createColumnFactory() {
+		return new IColumnFactory<EnumPropertyModel>() {
+			
+			@Override
+			public Column<JSEntity, ?> createListViewColumn(ListViewColumn<EnumPropertyModel> col) {
+				TextColumn<JSEntity> ret = new TextColumn<JSEntity>() {
+					
+					@Override
+					public String getValue(JSEntity row) {
+						IJSObject v = col.getPropertyDescriptor().getValue(row);
+						if (v == null) {
+							if (col.getPropertyDescriptor().getNotSetText() == null) {
+								return "-- NOT SET --";
+							} else {
+								return col.getPropertyDescriptor().getNotSetText();
+							}
+						}
+						return v.getDisplayValue();
+					}
+				};
+				return ret;
+			}
+		};
+	}
+	
+	private MaterialListBox list;
 	private EnumModel enumModel;
 	
 	public EnumItemSelector() {
-		this.list = new Select();
+		this.list = new MaterialListBox();
+		this.list.setFieldType(FieldType.OUTLINED);
 		
-		this.add(this.list);
+		this.initWidget(this.list);
 	}
+	
+	
 	public  void bind(JSEntity entity, EnumPropertyModel field, String viewName) {
 		super.bind(entity, field, viewName);
 		this.enumModel = field.getEnumModel();
+		
+		this.list.setPlaceholder(this.getDisplayName());
 		this.list.setEnabled(false);
+		
 		if (!this.getProperty().isRequired()) {
 			Option o = new Option();
 			o.setValue("");
-			o.setText("-- NOT SET --");
+			if (this.getProperty().getNotSetText() != null) {
+				o.setText(this.getProperty().getNotSetText());
+			} else {
+				o.setText("-- NOT SET --");
+			}
 			if (field.getDefaultValue() == null) {
 				o.setSelected(true);
 			}
@@ -53,12 +100,12 @@ public class EnumItemSelector extends AbstractFormPropertyEditor<EnumPropertyMod
 		}
 		
 		if (this.enumModel.getCodes().size() > 10) {
-			this.list.setLiveSearch(true);
-			this.list.setLiveSearchNormalize(true);
+			//this.list.setLiveSearch(true);
+			//this.list.setLiveSearchNormalize(true);
 		}
 		
-		if (this.getOriginalValue() != null) {
-			this.select(this.getOriginalValue().getCode());
+		if (this.getInitialValue() != null) {
+			this.select(this.getInitialValue().getCode());
 		}
 		
 		this.list.addValueChangeHandler(new ValueChangeHandler<String>() {
@@ -71,26 +118,16 @@ public class EnumItemSelector extends AbstractFormPropertyEditor<EnumPropertyMod
 	}
 	
 	@Override
-	public void setId(String uid) {
-		this.list.setId(uid);
-	}
-	
-	@Override
-	protected Widget getChildWidget() {
-		return this.list;
-	}
-	
-	@Override
-	public void setValue(String v) {
+	public void setValue(JSEnumValue v) {
 		if (v == null) {
 			return;
 		}
-		this.select(v.trim());
+		this.select(v.getCode());
 	}
 	
 	@Override
 	public boolean validate() {
-		if (this.getProperty().isRequired() && this.list.getSelectedItem() == null) {
+		if (this.getProperty().isRequired() && this.list.getSelectedValue() == null) {
 			return false;
 		}
 		return true;
@@ -98,11 +135,7 @@ public class EnumItemSelector extends AbstractFormPropertyEditor<EnumPropertyMod
 
 	@Override
 	public JSEnumValue getValue() {
-		Option o = this.list.getSelectedItem();
-		if (o == null) {
-			return null;
-		}
- 		String sv = o.getValue();
+ 		String sv = this.list.getSelectedValue();
 		if (sv == null || sv.length() == 0) {
 			return null;
 		}
@@ -110,17 +143,18 @@ public class EnumItemSelector extends AbstractFormPropertyEditor<EnumPropertyMod
 	}
 	
 	private void select(String value) {
-		for (int i = 0 ; i < this.list.getItemCount(); i++) {
-			Option o = this.list.getItem(i);
-			if (o.getValue().equals(value)) {
-				o.setSelected(true);
-			} else {
-				o.setSelected(false);
-			}
+		int si = this.list.getIndex(value);
+		if (si > 0) {
+			this.list.setSelectedIndex(si);
 		}
 	}
 	@Override
 	public void setEnabled(boolean value) {
 		this.list.setEnabled(value);
+	}
+	
+	@Override
+	public void setGrid(String grid) {
+		this.list.setGrid(grid);
 	}
 }

@@ -1,30 +1,22 @@
 package net.inveed.gwt.editor.client.editor.auto;
 
-import org.gwtbootstrap3.client.ui.FieldSet;
-import org.gwtbootstrap3.client.ui.Legend;
+import gwt.material.design.client.base.MaterialWidget;
+import gwt.material.design.client.ui.MaterialRow;
+import net.inveed.gwt.editor.client.model.EntityModel;
+import net.inveed.gwt.editor.shared.forms.panels.EditorSectionDTO;
 
-public abstract class AutoFormSection extends FieldSet {
-	private final String name;
-	private Legend legend;
+public class AutoFormSection extends AbstractAutoFormContainer<EditorSectionDTO> {
+	private MaterialRow self;
 	
-	public AutoFormSection(String name) {
-		this.name = name;
-		this.legend = new Legend();
+	public AutoFormSection(EditorSectionDTO dto, EntityModel model, AbstractAutoFormContainer<?> container) {
+		super(dto, model, container);
 	}
-	
-	public abstract int getOrder();
-	
-	public void setTitleEnabled(boolean v) {
-		this.legend.setVisible(v);
-	}
-	
-	protected Legend getLegend() {
-		return this.legend;
-	}
-	
-	public abstract void build();
-	
-	public String getName() {
-		return this.name;
+
+	@Override
+	public MaterialWidget getWidget() {
+		if (this.self == null) {
+			this.self = new MaterialRow();
+		}
+		return this.self;
 	}
 }

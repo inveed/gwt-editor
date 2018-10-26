@@ -1,71 +1,105 @@
 package net.inveed.gwt.editor.client.editor.fields;
 
-import org.gwtbootstrap3.client.ui.constants.IconType;
-import org.gwtbootstrap3.extras.toggleswitch.client.ui.ToggleSwitch;
-import org.gwtbootstrap3.extras.toggleswitch.client.ui.base.constants.SizeType;
-
-//import java.util.logging.Logger;
-
 import com.google.gwt.event.logical.shared.ValueChangeEvent;
 import com.google.gwt.event.logical.shared.ValueChangeHandler;
-import com.google.gwt.user.client.ui.Widget;
 
+import gwt.material.design.client.constants.CheckBoxType;
+import gwt.material.design.client.constants.IconType;
+import gwt.material.design.client.ui.MaterialCheckBox;
+import gwt.material.design.client.ui.MaterialIcon;
+import gwt.material.design.client.ui.table.cell.Column;
+import gwt.material.design.client.ui.table.cell.WidgetColumn;
+import net.inveed.gwt.editor.client.IColumnFactory;
+import net.inveed.gwt.editor.client.IPropertyEditorFactory;
+import net.inveed.gwt.editor.client.editor.EntityListView.ListViewColumn;
 import net.inveed.gwt.editor.client.model.JSEntity;
 import net.inveed.gwt.editor.client.model.properties.BooleanPropertyModel;
+import net.inveed.gwt.editor.client.types.IJSObject;
 import net.inveed.gwt.editor.client.types.JSBoolean;
+import net.inveed.gwt.editor.shared.forms.EditorFieldDTO;
 
-public class BooleanPropertyEditor extends AbstractFormPropertyEditor<BooleanPropertyModel, JSBoolean> {
-	//private static final Logger LOG = Logger.getLogger(BooleanPropertyEditor.class.getName());
+public class BooleanPropertyEditor extends AbstractFormPropertyEditor<BooleanPropertyModel, JSBoolean> {	
+	public static final IPropertyEditorFactory<BooleanPropertyModel> createEditorFactory() {
+		return new IPropertyEditorFactory<BooleanPropertyModel>() {
+
+			@Override
+			public AbstractFormPropertyEditor<BooleanPropertyModel, ?> createEditor(BooleanPropertyModel property, EditorFieldDTO dto) {
+				return new BooleanPropertyEditor();
+			}};
+	}
 	
-	private ToggleSwitch checkbox;
+	public static final IColumnFactory<?> createColumnFactory() {
+		return new IColumnFactory<BooleanPropertyModel>() {
+			@Override
+			public Column<JSEntity, ?> createListViewColumn(ListViewColumn<BooleanPropertyModel> col) {
+				WidgetColumn<JSEntity, MaterialIcon> ret = new WidgetColumn<JSEntity, MaterialIcon>() {
+					@Override
+					public MaterialIcon getValue(JSEntity row) {
+		                
+						IJSObject val = row.getProperty(col.getPropertyDescriptor().getName());
+						if (val == null) {
+							return new MaterialIcon(IconType.REMOVE_CIRCLE_OUTLINE);
+						} else if (JSBoolean.TYPE.equals(val.getType())) {
+							JSBoolean v = (JSBoolean) val;
+							if (v.getValue() == null) {
+								return new MaterialIcon(IconType.REMOVE_CIRCLE_OUTLINE);
+							} else if (v.getValue()) {
+								return new MaterialIcon(IconType.RADIO_BUTTON_CHECKED);
+							} else {
+								return new MaterialIcon(IconType.RADIO_BUTTON_UNCHECKED);
+							}
+							
+						} else {
+							return new MaterialIcon(IconType.REMOVE_CIRCLE_OUTLINE);
+						}
+					}
+				};
+
+				return ret;
+			}};
+	}
+	
+	private MaterialCheckBox checkbox;
 	
 	public BooleanPropertyEditor() {
-		this.checkbox = new ToggleSwitch();
-		this.checkbox.setOnIcon(IconType.CHECK);
-		this.checkbox.setOffIcon(IconType.TIMES);
-		this.checkbox.setSize(SizeType.MINI);
-		
+		this.checkbox = new MaterialCheckBox();
+		this.checkbox.setType(CheckBoxType.FILLED);
 		this.checkbox.addValueChangeHandler(new ValueChangeHandler<Boolean>() {
-			
 			@Override
 			public void onValueChange(ValueChangeEvent<Boolean> event) {
 				onValueChanged();
 			}
 		});
-		this.add(this.checkbox);
+		this.initWidget(this.checkbox);
 	}
 	
-	@Override
-	protected Widget getChildWidget() {
-		return this.checkbox;
-	}
 	@Override
 	public void bind(JSEntity entity, BooleanPropertyModel field, String viewName) {
 		super.bind(entity, field, viewName);
 		if (this.isReadonly()) {
 			this.checkbox.setEnabled(false);
 		}
+
+		this.checkbox.setText(this.getDisplayName());
 		
-		if (this.getOriginalValue() != null) {
-			this.checkbox.setValue(this.getOriginalValue().getValue());
-		}
+		this.setInitialValue();
 	}
 	
 	@Override
-	public void setValue(String v) {
+	public void setValue(JSBoolean v) {
 		if (this.checkbox == null) {
 			return;
 		}
 		if (v == null) {
 			this.checkbox.setValue(false);
 			return;
-		}
-		v = v.trim().toLowerCase();
-		if (v.equals("true") || v.equals("yes") || v.equals("1")) {
-			this.checkbox.setValue(true);
-		} else {
+		} else if (v.getValue() == null) {
 			this.checkbox.setValue(false);
+			return;
+		} else {
+			this.checkbox.setValue(v.getValue());
 		}
+		
 	}
 	
 	@Override
@@ -86,12 +120,12 @@ public class BooleanPropertyEditor extends AbstractFormPropertyEditor<BooleanPro
 	}
 
 	@Override
-	public void setId(String uid) {
-		this.checkbox.setId(uid);
+	public void setEnabled(boolean value) {
+		this.checkbox.setEnabled(value);
 	}
 
 	@Override
-	public void setEnabled(boolean value) {
-		this.checkbox.setEnabled(value);
+	public void setGrid(String grid) {
+		this.checkbox.setGrid(grid);
 	}
 }

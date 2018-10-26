@@ -2,31 +2,32 @@ package net.inveed.gwt.editor.client.editor;
 
 import java.util.logging.Logger;
 
-import org.gwtbootstrap3.client.ui.Button;
-import org.gwtbootstrap3.client.ui.Modal;
-import org.gwtbootstrap3.client.ui.ModalBody;
-
 import com.google.gwt.core.shared.GWT;
-import com.google.gwt.dom.client.Style.Unit;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.uibinder.client.UiBinder;
 import com.google.gwt.uibinder.client.UiField;
 import com.google.gwt.uibinder.client.UiHandler;
-import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.Widget;
 
+import gwt.material.design.client.constants.DialogType;
+import gwt.material.design.client.constants.TextAlign;
+import gwt.material.design.client.ui.MaterialButton;
+import gwt.material.design.client.ui.MaterialDialog;
+import gwt.material.design.client.ui.MaterialDialogContent;
+import gwt.material.design.client.ui.MaterialPanel;
+import gwt.material.design.client.ui.MaterialToast;
 import net.inveed.gwt.editor.client.ProgressBarController;
 import net.inveed.gwt.editor.client.RootContainer;
 import net.inveed.gwt.editor.client.editor.auto.AutoEntityEditorForm;
 import net.inveed.gwt.editor.client.editor.fields.AbstractPropertyEditor.ValueChangeListener;
 import net.inveed.gwt.editor.client.jsonrpc.JsonRPCTransaction;
-import net.inveed.gwt.editor.client.jsonrpc.JsonRPCTransaction.TransactionResult;
-import net.inveed.gwt.editor.client.model.EntityFormView;
 import net.inveed.gwt.editor.client.model.EntityModel;
 import net.inveed.gwt.editor.client.model.JSEntity;
 import net.inveed.gwt.editor.client.utils.IError;
 import net.inveed.gwt.editor.client.utils.Promise;
 import net.inveed.gwt.editor.client.utils.PromiseImpl;
+import net.inveed.gwt.editor.commons.UIConstants;
+import net.inveed.gwt.editor.shared.forms.panels.AutoFormViewDTO;
 
 public class EntityEditorDialog {
 	interface EntityEditorDialogBinder extends UiBinder<Widget, EntityEditorDialog> {}
@@ -39,14 +40,27 @@ public class EntityEditorDialog {
 	
 	private PromiseImpl<Boolean, IError> closePromise;
 	
-	@UiField protected Button btnCancel;
-	@UiField protected Button btnOk;
-	@UiField protected Modal modal;
-	@UiField protected ModalBody content;
+	@UiField protected MaterialButton btnCancel;
+	@UiField protected MaterialButton btnOk;
+	@UiField protected MaterialDialog modal;
+	@UiField protected MaterialDialogContent dc;
+	@UiField protected MaterialPanel content;
 	
-	public EntityEditorDialog(JSEntity entity) {
+	protected EditorTitle title;
+	
+	private boolean isNewEntity;
+	
+	private String viewEditName;
+	private String viewName;
+	
+	public EntityEditorDialog(JSEntity entity, String viewName) {
 		uiBinder.createAndBindUi(this);
+		this.viewName = viewName;
+		this.title = new EditorTitle();
+		dc.insert(this.title, 0);
 		this.entity = entity;
+		this.modal.setType(DialogType.FIXED_FOOTER);
+		this.content.setTextAlign(TextAlign.LEFT);
 	}
 	
 	public void validate() {
@@ -65,25 +79,32 @@ public class EntityEditorDialog {
 			this.validate();
 			return;
 		}
+
 		this.enityEditorForm.applyChanges();
 		JsonRPCTransaction tran = new JsonRPCTransaction();
 		this.enityEditorForm.persist(tran);
 		
 		tran.commit().thenApply((JsonRPCTransactionResponse)->{
-			this.modal.hide();
+			this.modal.close();
 			this.modal.removeFromParent();
 			
-			if (closePromise != null) {
+			if (this.isNewEntity && this.getViewEditName() != null) {
+				EntityEditorDialog editDialog = new EntityEditorDialog(this.entity, this.getViewEditName());
+				Promise<Boolean, IError> p = editDialog.show();
+				p.thenApply((v)->{
+					closePromise.complete(true);
+					return null;
+				});
+				p.onError((e,t)->{
+					closePromise.complete(true);
+					return null;
+				});
+			} else if (closePromise != null) {
 				closePromise.complete(true);
 			}
 			return null;
 		}).onError((IError e, Throwable t) -> {
-			this.modal.hide();
-			this.modal.removeFromParent();
-			
-			if (closePromise != null) {
-				closePromise.complete(false);
-			}
+			MaterialToast.fireToast("Cannot save", 3000);
 			return null;
 		});
 	}
@@ -91,7 +112,7 @@ public class EntityEditorDialog {
 	@UiHandler("btnCancel")
 	protected void onCancelClick(ClickEvent evt) {
 		LOG.info("Cancel button clicked");
-		this.modal.hide();
+		this.modal.close();
 		this.modal.removeFromParent();
 		
 		if (closePromise == null) {
@@ -100,47 +121,52 @@ public class EntityEditorDialog {
 		closePromise.complete(false);
 	}
 	
-	public static AbstractEntityEditorForm getFormWidget(EntityModel model, EntityFormView view) {
+	public static AbstractEntityEditorForm getFormWidget(EntityModel model, String viewName) {
 		assert(model != null);
-		assert(view != null);
-
+		assert(viewName != null);
+		
+		viewName = viewName.trim();
+		
 		LOG.fine("Creating form creator...");
 		IEntityEditorFactory formFactory = EntityEditorRegistry.INSTANCE.getFactory(model.getEntityName());
 
 		if (formFactory != null) {
 			LOG.fine("Instantiating form with factory...");
-			AbstractEntityEditorForm ret = formFactory.create(view);
+			AbstractEntityEditorForm ret = formFactory.create(viewName);
 			if (ret != null) {
 				return ret;
 			}
-		} 
-
-		LOG.fine("Using default form");			
-		return new AutoEntityEditorForm(view);
+		}
+		LOG.fine("Editor not found. Trying to build auto editor");
+		if (model.getEditorsDTO() == null) {
+			LOG.warning("Auto editors not defined for entity " + model.getEntityName());
+			return null;
+		}
+		AutoFormViewDTO edto = model.getEditorsDTO().get(viewName);
+		if (edto == null) {
+			LOG.warning("Auto editor not defined for entity " + model.getEntityName() + " view '" + viewName + "'");
+			edto = model.getEditorsDTO().get(UIConstants.VIEWS_ALL);
+			if (edto == null) {
+				LOG.warning("Auto editor not defined for entity " + model.getEntityName() + " default view");
+				return null;
+			}
+		}
+		return new AutoEntityEditorForm(edto, model);
 	}
 	
-	private void buildFormAndShow(String viewName, boolean isNewEntity) {
-		EntityFormView view = this.entity.getModel().getFormView(viewName);
-		if (view == null) {
-			LOG.warning("Cannot find view with name " + viewName);
-			return;
-		}
-		
+	private void buildFormAndShow() {
 		if (!isNewEntity) {
-			LOG.info("Editing entity '" + this.entity.getModel() + "' with ID '" + this.entity.getID() + "'");
+			LOG.info(this.entity.getModel() + "' with ID '" + this.entity.getID() + "'");
 			
-			this.modal.setTitle("Editing " //TODO: локализовать строки!!!
-					+ this.entity.getModel().getDisplayName(viewName) 
-					+ ": " 
+			this.title.setTitle(this.entity.getModel().getDisplayName(viewName) 
+					+ " [#" + this.entity.getID().getDisplayValue() + "] "
 					+ this.entity.getDisplayValue());
-			
 		} else {
 			LOG.info("Creating new entity");
-			this.modal.setTitle("Creating new:" + this.entity.getModel().getDisplayName(viewName)); //TODO: локализовать строки!!!
-		
+			this.title.setTitle("NEW: " + this.entity.getModel().getDisplayName(viewName)); //TODO: локализовать строки!!!
 		}
 
-		AbstractEntityEditorForm form = getFormWidget(this.entity.getModel(), view);
+		AbstractEntityEditorForm form = getFormWidget(this.entity.getModel(), viewName);
 		if (form == null) {
 			LOG.warning("Cannot create form");
 			return;
@@ -150,19 +176,21 @@ public class EntityEditorDialog {
 		this.content.clear();
 		this.content.add(form);
 		
+		int height = 500;
 		if (form.getRequestedHeight() != null) {
 			//this.modal.setType(ModalType.DEFAULT);
-			this.modal.setHeight((form.getRequestedHeight() + 30) + "");
-		}
+			height = form.getRequestedHeight() + 30;
+		} 
+		this.modal.setHeight((height + 160) + "px");
+		//this.content.setHeight(height + "px");
 		if (form.getRequestedWidth() != null) {
 			//this.modal.setType(ModalType.DEFAULT);
-			this.modal.setWidth((form.getRequestedWidth() + 5) + "");
+			this.modal.setWidth((form.getRequestedWidth() + 5) + "px");
 		}
 		
 		LOG.fine("Binding form");
 		form.bind(entity);
 				
-		LOG.fine("Opening modal window");
 		
 		form.addValueChangedListener(new ValueChangeListener() {
 			
@@ -172,27 +200,26 @@ public class EntityEditorDialog {
 			}
 		});
 		
+		LOG.fine("Opening modal window");
 		this.enityEditorForm = form;
 		
-		int maxHeigh = Math.max((int) ((double) Window.getClientHeight() * 0.95D) - 150, 500);
-		this.content.getElement().getStyle().setProperty("maxHeight", maxHeigh, Unit.PX);
-		this.modal.show();
+		this.modal.open();
+
 		this.validate();
 	}
-	public Promise<Boolean, IError> show(String viewName) {
+	public Promise<Boolean, IError> show() {
 		RootContainer.INSTANCE.modalContainer.add(this.modal);
-		
 		this.btnOk.setEnabled(false);
-		boolean isNew = (this.entity == null ? true : this.entity.getID() == null);
-		if (isNew) {
-			this.buildFormAndShow(viewName, isNew);
+		this.isNewEntity = (this.entity == null ? true : this.entity.getID() == null);
+		if (this.isNewEntity) {
+			this.buildFormAndShow();
 		} else {
 			
 			Promise<Void, IError> p = this.entity.load();
 			ProgressBarController.INSTANCE.add(p);
 			p.thenApply((Void) -> {
 				try {
-					this.buildFormAndShow(viewName, isNew);
+					this.buildFormAndShow();
 				} finally {
 					ProgressBarController.INSTANCE.remove(p);
 				}
@@ -206,6 +233,51 @@ public class EntityEditorDialog {
 		}
 		PromiseImpl<Boolean, IError> ret = new PromiseImpl<>();
 		this.closePromise = ret;
-		return ret;		
+		return ret;
+	}
+
+	public String getViewEditName() {
+		return viewEditName;
+	}
+
+	public void setViewEditName(String viewEditName) {
+		if (viewEditName == null) {
+			return;
+		}
+		if (!reopenAfterCreate(this.viewName, viewEditName, this.entity.getModel())) {
+			return;
+		}
+		this.viewEditName = viewEditName;
+	}
+	
+	private static boolean reopenAfterCreate(String createView, String editView, EntityModel model) {
+		if (createView.equals(editView)) {
+			return false;
+		}
+		IEntityEditorFactory efactory = EntityEditorRegistry.INSTANCE.getFactory(model.getEntityName());
+		if (efactory != null) {
+			return efactory.reopenAfterCreate(createView, editView, model);
+		}
+		if (model.getEditorsDTO() == null) {
+			return false;
+		}
+		AutoFormViewDTO cdto = model.getEditorsDTO().get(createView);
+		if (cdto == null) {
+			cdto =  model.getEditorsDTO().get(UIConstants.VIEWS_ALL);
+		}
+		AutoFormViewDTO edto = model.getEditorsDTO().get(editView);
+		if (edto == null) {
+			edto =  model.getEditorsDTO().get(UIConstants.VIEWS_ALL);
+		}
+		if (edto == null) {
+			return false;
+		}
+		if (cdto == null) {
+			return false;
+		}
+		/*if (cdto.viewName.equals(edto.viewName)) {
+			return false;
+		}*/
+		return !cdto.equalsTo(edto);
 	}
 }

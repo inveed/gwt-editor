@@ -1,130 +1,143 @@
 package net.inveed.gwt.editor.client.editor.fields;
 
-import org.gwtbootstrap3.client.ui.DoubleBox;
-import org.gwtbootstrap3.client.ui.InputGroup;
-import org.gwtbootstrap3.client.ui.InputGroupAddon;
-import org.gwtbootstrap3.client.ui.IntegerBox;
-import org.gwtbootstrap3.client.ui.base.ValueBoxBase;
 
 import com.google.gwt.event.dom.client.KeyUpEvent;
 import com.google.gwt.event.dom.client.KeyUpHandler;
+
 import com.google.gwt.event.logical.shared.ValueChangeEvent;
 import com.google.gwt.event.logical.shared.ValueChangeHandler;
-import com.google.gwt.json.client.JSONNumber;
-import com.google.gwt.json.client.JSONString;
-import com.google.gwt.user.client.ui.Widget;
 
+import net.inveed.gwt.editor.client.IPropertyEditorFactory;
+import net.inveed.gwt.editor.client.controls.InputGroup;
+import net.inveed.gwt.editor.client.controls.InputGroupText;
+import net.inveed.gwt.editor.client.controls.SimpleDoubleBox;
+import net.inveed.gwt.editor.client.controls.SimpleIntegerBox;
+import net.inveed.gwt.editor.client.controls.SimpleNumberBox;
 import net.inveed.gwt.editor.client.model.JSEntity;
 import net.inveed.gwt.editor.client.model.properties.DurationPropertyModel;
 import net.inveed.gwt.editor.client.types.JSTimeInterval;
-import net.inveed.gwt.editor.client.types.JSTimeInterval.Format;
+import net.inveed.gwt.editor.commons.DurationPrecision;
+import net.inveed.gwt.editor.shared.forms.EditorFieldDTO;
 
 public class DurationPropertyEditor extends AbstractFormPropertyEditor<DurationPropertyModel, JSTimeInterval> {
-	private InputGroup widget;
-	
-	private IntegerBox yearsTb;
-	private IntegerBox monthsTb;
-	private IntegerBox daysTb;
-	private IntegerBox hoursTb;
-	private IntegerBox minutesTb;
-	private DoubleBox secondsTb;
-	
-	//private MaterialColumn titleCol;
-	//private Label titleLabel;
-	
-	private InputGroupAddon createAddonBox(String text) {
-		InputGroupAddon ret = new InputGroupAddon();
-		ret.setText(text);
-		return ret;
+	public static final IPropertyEditorFactory<DurationPropertyModel> createEditorFactory() {
+		return new IPropertyEditorFactory<DurationPropertyModel>() {
+			@Override
+			public AbstractFormPropertyEditor<DurationPropertyModel, ?> createEditor(DurationPropertyModel property, EditorFieldDTO dto) {
+				return new DurationPropertyEditor();
+			}};
 	}
+
+	private InputGroup group;
+	
+	private SimpleIntegerBox yearsTb;
+	private SimpleIntegerBox monthsTb;
+	private SimpleIntegerBox daysTb;
+	private SimpleIntegerBox hoursTb;
+	private SimpleIntegerBox minutesTb;
+	private SimpleDoubleBox  secondsTb;
+	
 	public DurationPropertyEditor() {
-		this.widget = new InputGroup();
-		this.add(this.widget);
+		this.group = new InputGroup();
+		this.initWidget(this.group);
+		
 	}
+	
+	private void addText(String txt) {
+		this.group.add(new InputGroupText(txt));
+		
+	}
+	private void buildRow() {
+		if (this.getProperty().getMaxItem() == DurationPrecision.YEAR) {
+			this.yearsTb = new SimpleIntegerBox();
+			this.yearsTb.setValue(0);
+			this.yearsTb.setMin("0");
+			
+			this.addListener(this.yearsTb);
+			this.group.add(this.yearsTb);
+			
+			this.addText("Years");
+		}
+		if (getProperty().getMaxItem().getLevel() >= DurationPrecision.MONTH.getLevel() 
+				&& getProperty().getPrecision().getLevel() <= DurationPrecision.MONTH.getLevel()) {
+			this.monthsTb = new SimpleIntegerBox();
+			this.monthsTb.setValue(0);
+			this.monthsTb.setMin("0");
+			
+			this.addListener(this.monthsTb);
+			this.group.add(this.monthsTb);
+			
+			this.addText("Months");
+		}
+		
+		if (getProperty().getMaxItem().getLevel() >= DurationPrecision.DAY.getLevel() 
+				&& getProperty().getPrecision().getLevel() <= DurationPrecision.DAY.getLevel()) {
+			this.daysTb = new SimpleIntegerBox();
+			this.daysTb.setValue(0);
+			this.daysTb.setMin("0");
+			
+			this.addListener(this.daysTb);
+			this.group.add(this.daysTb);
+			
+			this.addText("Days");
+		}
+		
+		if (getProperty().getMaxItem().getLevel() >= DurationPrecision.HOUR.getLevel() 
+				&& getProperty().getPrecision().getLevel() <= DurationPrecision.HOUR.getLevel()) {
+			this.hoursTb = new SimpleIntegerBox();
+			this.hoursTb.setValue(0);
+			this.hoursTb.setMin("0");
+			
+			this.addListener(this.hoursTb);
+			this.group.add(this.hoursTb);
+			
+			this.addText("Hours");
+		}
+		if (getProperty().getMaxItem().getLevel() >= DurationPrecision.MINUTE.getLevel() 
+				&& getProperty().getPrecision().getLevel() <= DurationPrecision.MINUTE.getLevel()) {
+		
+			this.minutesTb = new SimpleIntegerBox();
+			this.minutesTb.setValue(0);
+			this.minutesTb.setMin("0");
+			
+			this.addListener(this.minutesTb);
+			this.group.add(this.minutesTb);
+			
+			this.addText("Min");
+		}
+		if (getProperty().getMaxItem().getLevel() >= DurationPrecision.SECOND.getLevel() 
+				&& getProperty().getPrecision().getLevel() <= DurationPrecision.SECOND.getLevel()) {
+			this.secondsTb = new SimpleDoubleBox();
+			this.secondsTb.setValue(0D);
+			this.secondsTb.setMin("0");
+			
+			this.addListener(this.secondsTb);
+			this.group.add(this.secondsTb);
+			
+			this.addText("Sec");
+		}		
+	}
+
 	public  void bind(JSEntity entity, DurationPropertyModel field, String viewName) {
 		super.bind(entity, field, viewName);
 		
-		boolean ro = this.isReadonly();
+		this.buildRow();
+		this.group.setLabel(field.getDisplayName(viewName));
 		
-		if (this.getProperty().getFormat() == Format.ISO) {
-			this.yearsTb = new IntegerBox();
-			//this.yearsTb.setLabel("Years");
-			this.yearsTb.setValue(0);
-			//this.yearsTb.setReadOnly(ro);
-			
-			this.addListener(this.yearsTb);
-			
-			this.monthsTb = new IntegerBox();
-			//this.monthsTb.setLabel("Months");
-			//this.monthsTb.setMin("0");
-			this.monthsTb.setReadOnly(ro);
-			this.addListener(this.monthsTb);
-			
-			this.widget.add(yearsTb);
-			this.widget.add(createAddonBox("Years"));
-			this.widget.add(monthsTb);
-			this.widget.add(createAddonBox("Months"));
-		}
-		
-		this.daysTb = new IntegerBox();
-		//this.daysTb.setLabel("Days");
-		//this.daysTb.setMin("0");
-		//this.daysTb.setReadOnly(ro);
-		this.addListener(this.daysTb);
-		
-		this.hoursTb = new IntegerBox();
-		//this.hoursTb.setLabel("Hours");
-		//this.hoursTb.setMin("0");
-		//this.hoursTb.setReadOnly(ro);
-		this.addListener(this.hoursTb);
-		
-		this.minutesTb = new IntegerBox();
-		//this.minutesTb.setLabel("Minutes");
-		//this.minutesTb.setMin("0");
-		//this.minutesTb.setReadOnly(ro);
-		this.addListener(this.minutesTb);
-		
-
-		this.widget.add(daysTb);
-		this.widget.add(createAddonBox("Days"));
-		this.widget.add(hoursTb);
-		this.widget.add(createAddonBox("Hrs"));
-		this.widget.add(minutesTb);
-		this.widget.add(createAddonBox("Min"));
-		
-		if (this.getProperty().getFormat() != Format.MINUTES) {
-			this.secondsTb = new DoubleBox();
-			//this.secondsTb.setLabel("Seconds");
-			//this.secondsTb.setMin("0");
-			//this.secondsTb.setReadOnly(ro);
-			this.addListener(this.secondsTb);
-			
-			
-			this.widget.add(secondsTb);
-			this.widget.add(createAddonBox("Sec"));
-		}
-		
-		
-		
-		this.setValue(this.getOriginalValue());
-	}
-	
-	@Override
-	protected Widget getChildWidget() {
-		return this.widget;
+		this.setInitialValue();
 	}
 
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	private void addListener(ValueBoxBase<?> b) {
-		b.addValueChangeHandler(new ValueChangeHandler() {
+	private void addListener(SimpleNumberBox<?> yearsTb2) {
+		yearsTb2.addValueChangeHandler(new ValueChangeHandler() {
 
 			@Override
 			public void onValueChange(ValueChangeEvent event) {
 				onValueChanged();
 			}
 		});
-		b.addKeyUpHandler(new KeyUpHandler() {
+		yearsTb2.addKeyUpHandler(new KeyUpHandler() {
 			
 			@Override
 			public void onKeyUp(KeyUpEvent event) {
@@ -133,47 +146,62 @@ public class DurationPropertyEditor extends AbstractFormPropertyEditor<DurationP
 		});
 	}
 	
-	@Override
-	public void setValue(String v) {
-		if (v == null) {
-			return;
-		}
-		v = v.trim();
-		if (v.length() == 0) {
-			return;
-		}
-		try {
-			Double d = Double.parseDouble(v);
-			JSONNumber num = new JSONNumber(d);
-			JSTimeInterval ival = JSTimeInterval.parse(num, this.getProperty().getFormat());
-			if (ival != null) {
-				this.setValue(ival);
-				return;
-			}
-		} catch (Exception e) {
-		}
-		
-		JSONString jstring = new JSONString(v);
-		JSTimeInterval ival = JSTimeInterval.parse(jstring, this.getProperty().getFormat());
-		if (ival != null) {
-			this.setValue(ival);
-		}
+
+	public int getYears() {
+		return this.yearsTb == null ? 0 : (this.yearsTb.getValue() == null ? 0 : this.yearsTb.getValue());
 	}
 	
+	public int getMonths() {
+		return this.monthsTb == null ? 0 : (this.monthsTb.getValue() == null ? 0 : this.monthsTb.getValue());
+	}
+	
+	public int getDays() {
+		return this.daysTb == null ? 0 : (this.daysTb.getValue() == null ? 0 : this.daysTb.getValue());
+	}
+	
+	public int getHours() {
+		return this.hoursTb == null ? 0 : (this.hoursTb.getValue() == null ? 0 : this.hoursTb.getValue());
+	}
+	
+	public int getMinutes() {
+		return this.minutesTb == null ? 0 : (this.minutesTb.getValue() == null ? 0 : this.minutesTb.getValue());
+	}
+	
+	public double getSeconds() {
+		return this.secondsTb == null ? 0 : (this.secondsTb.getValue() == null ? 0 : this.secondsTb.getValue());
+	}
+	
+	@Override
 	public void setValue(JSTimeInterval interval) {
 		if (interval == null) {
 			return;
 		}
-		if (this.getProperty().getFormat() == Format.ISO) {
+		if (this.yearsTb != null && this.monthsTb != null) {
 			this.yearsTb.setValue((int)interval.getHYears());
 			this.monthsTb.setValue((int) interval.getHMonths());
+		} else if (this.yearsTb != null) {
+			this.yearsTb.setValue((int)interval.getHYears());
+		} else if (this.monthsTb != null) {
+			this.monthsTb.setValue((int) interval.getMonths());
 		}
-
-		this.daysTb.setValue((int)interval.getHDays());
-		this.hoursTb.setValue((int)interval.getHHours());
-		this.minutesTb.setValue((int)interval.getHMinutes());
-		if (this.getProperty().getFormat() != Format.MINUTES) {
-			this.secondsTb.setValue(interval.getHSeconds());
+		
+		double seconds = interval.getSeconds();
+		if (this.daysTb != null) {
+			this.daysTb.setValue((int) interval.getHDays());
+			seconds -= (double) (interval.getHDays() * 24L * 3600L);
+		}
+		if (this.hoursTb != null) {
+			long hours = (long) (seconds / 3600D);
+			seconds -= (double) (hours * 3600L);
+			this.hoursTb.setValue((int)hours);
+		}
+		if (minutesTb != null) {
+			long minutes = (long) (seconds / 60D);
+			seconds -= (double) (minutes * 60L);
+			this.minutesTb.setValue((int)minutes);
+		}
+		if (this.secondsTb != null) {
+			this.secondsTb.setValue(seconds);
 		}
 	}
 	
@@ -184,42 +212,15 @@ public class DurationPropertyEditor extends AbstractFormPropertyEditor<DurationP
 
 	@Override
 	public JSTimeInterval getValue() {
-		Double seconds = null;
-		if (this.secondsTb != null) {
-			seconds = this.secondsTb.getValue();
-		}
-		if (this.getProperty().getFormat() == Format.ISO) {
-			Integer years = null;
-			Integer months = null;
-			if (this.yearsTb.getValue() != null) {
-				years = this.yearsTb.getValue().intValue();
-			}
-			
-			if (this.monthsTb.getValue() != null) {
-				months = this.monthsTb.getValue().intValue();
-			}
-			
-			return new JSTimeInterval(years, 
-					months,
-					this.daysTb.getValue(), 
-					this.hoursTb.getValue(), 
-					this.minutesTb.getValue(),
-					seconds, 
+		return new JSTimeInterval(this.getYears(), 
+					this.getMonths(),
+					this.getDays(),
+					this.getHours(),
+					this.getMinutes(),
+					this.getSeconds(),
 					this.getProperty().getFormat());
-		} else {
-			return new JSTimeInterval(0, 0,
-					this.daysTb.getValue(), 
-					this.hoursTb.getValue(), 
-					this.minutesTb.getValue(),
-					seconds, 
-					this.getProperty().getFormat());
-		}
 	}
 
-	@Override
-	public void setId(String uid) {
-		this.widget.setId(uid);
-	}
 	@Override
 	public void setEnabled(boolean value) {
 		if (this.daysTb != null) this.daysTb.setEnabled(value);
@@ -228,5 +229,9 @@ public class DurationPropertyEditor extends AbstractFormPropertyEditor<DurationP
 		if (this.monthsTb != null) this.monthsTb.setEnabled(value);
 		if (this.secondsTb != null) this.secondsTb.setEnabled(value);
 		if (this.yearsTb != null) this.yearsTb.setEnabled(value);
+	}
+	@Override
+	public void setGrid(String grid) {
+		this.group.setGrid(grid);
 	}
 }

@@ -7,14 +7,14 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import net.inveed.gwt.editor.shared.UIConstants;
+import net.inveed.gwt.editor.commons.UIConstants;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD, ElementType.METHOD})
 @Inherited
-@Repeatable(UIListViews.class)
+@Repeatable(UIListViewFieldCollection.class)
 public @interface UIListView {
-	String name() default UIConstants.ALL;
+	String name() default UIConstants.VIEWS_ALL;
 	int order() default 100;
 	int width() default 0;
 }

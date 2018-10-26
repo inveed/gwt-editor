@@ -2,7 +2,6 @@ package net.inveed.gwt.editor.client.lists;
 
 import java.util.logging.Logger;
 
-
 import net.inveed.gwt.editor.client.ProgressBarController;
 import net.inveed.gwt.editor.client.editor.EntityEditorDialog;
 import net.inveed.gwt.editor.client.model.EntityManager;
@@ -12,7 +11,7 @@ import net.inveed.gwt.editor.client.types.JSEntityList;
 import net.inveed.gwt.editor.client.utils.IError;
 import net.inveed.gwt.editor.client.utils.Promise;
 import net.inveed.gwt.editor.client.utils.PromiseImpl;
-import net.inveed.gwt.editor.shared.UIConstants;
+import net.inveed.gwt.editor.commons.UIConstants;
 
 public class GenericEntityList extends EntityList {
 	private static final Logger LOG = Logger.getLogger(GenericEntityList.class.getName());
@@ -22,6 +21,7 @@ public class GenericEntityList extends EntityList {
 	public void bind(EntityModel model, String viewName, EntityManager em) {
 		super.bind(model, em, viewName);
 		this.entityManager = em;
+		this.setTableTitle(model.getPluralDisplayName(viewName), "1.5em");
 	}
 	
 	@Override
@@ -60,8 +60,9 @@ public class GenericEntityList extends EntityList {
 	
 	protected void openNewItemEditor(EntityModel model) {
 		JSEntity entity = new JSEntity(model, this.entityManager);
-		EntityEditorDialog dialog = new EntityEditorDialog(entity);
-		Promise<Boolean, IError> p = dialog.show(UIConstants.FORM_CREATE);
+		EntityEditorDialog dialog = new EntityEditorDialog(entity, UIConstants.FORM_CREATE);
+		dialog.setViewEditName(UIConstants.FORM_EDIT);
+		Promise<Boolean, IError> p = dialog.show();
 		p.thenApply((Boolean v) -> {
 			if (v != null) {
 				if (v) {

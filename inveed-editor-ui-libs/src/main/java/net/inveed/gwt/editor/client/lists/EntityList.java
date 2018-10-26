@@ -1,56 +1,55 @@
 package net.inveed.gwt.editor.client.lists;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Logger;
 
-import org.gwtbootstrap3.client.ui.AnchorListItem;
-import org.gwtbootstrap3.client.ui.Button;
-import org.gwtbootstrap3.client.ui.ButtonGroup;
-import org.gwtbootstrap3.client.ui.DropDownMenu;
-import org.gwtbootstrap3.client.ui.Heading;
-import org.gwtbootstrap3.client.ui.Pagination;
-import org.gwtbootstrap3.client.ui.constants.ButtonType;
-import org.gwtbootstrap3.client.ui.constants.IconType;
-import org.gwtbootstrap3.client.ui.constants.Toggle;
-import org.gwtbootstrap3.client.ui.gwt.ButtonCell;
-import org.gwtbootstrap3.client.ui.gwt.CellTable;
-import org.gwtbootstrap3.extras.notify.client.constants.NotifyType;
-import org.gwtbootstrap3.extras.notify.client.ui.Notify;
 
-import com.google.gwt.cell.client.FieldUpdater;
-import com.google.gwt.cell.client.Cell.Context;
 import com.google.gwt.core.shared.GWT;
+import com.google.gwt.dom.client.Style.Unit;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
-import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.google.gwt.uibinder.client.UiBinder;
 import com.google.gwt.uibinder.client.UiField;
-import com.google.gwt.user.cellview.client.Column;
-import com.google.gwt.user.cellview.client.SimplePager;
+import com.google.gwt.user.client.DOM;
 import com.google.gwt.user.client.ui.Composite;
+import com.google.gwt.user.client.ui.Panel;
 import com.google.gwt.user.client.ui.Widget;
-import com.google.gwt.view.client.ListDataProvider;
-import com.google.gwt.view.client.RangeChangeEvent;
 
+import gwt.material.design.client.base.MaterialWidget;
+import gwt.material.design.client.constants.ButtonType;
+import gwt.material.design.client.constants.Color;
+import gwt.material.design.client.constants.IconType;
+import gwt.material.design.client.data.events.RowDoubleClickEvent;
+import gwt.material.design.client.data.events.RowDoubleClickHandler;
+import gwt.material.design.client.ui.MaterialButton;
+import gwt.material.design.client.ui.MaterialDropDown;
+import gwt.material.design.client.ui.MaterialIcon;
+import gwt.material.design.client.ui.MaterialLabel;
+import gwt.material.design.client.ui.MaterialLink;
+import gwt.material.design.client.ui.MaterialPanel;
+import gwt.material.design.client.ui.MaterialToast;
+import gwt.material.design.client.ui.table.MaterialDataTable;
+import gwt.material.design.client.ui.table.cell.Column;
+import gwt.material.design.client.ui.table.cell.WidgetColumn;
+import net.inveed.gwt.editor.client.UIRegistry;
 import net.inveed.gwt.editor.client.editor.EntityEditorDialog;
+import net.inveed.gwt.editor.client.editor.EntityListView;
+import net.inveed.gwt.editor.client.editor.EntityListView.ListViewColumn;
 import net.inveed.gwt.editor.client.i18n.Localizer;
 import net.inveed.gwt.editor.client.jsonrpc.JsonRPCRequest.RequestResult;
 import net.inveed.gwt.editor.client.jsonrpc.JsonRPCTransaction;
 import net.inveed.gwt.editor.client.jsonrpc.JsonRPCTransaction.TransactionResult;
-import net.inveed.gwt.editor.client.model.EntityListView;
 import net.inveed.gwt.editor.client.model.EntityModel;
 import net.inveed.gwt.editor.client.model.JSEntity;
-import net.inveed.gwt.editor.client.model.EntityListView.PropertyInView;
 import net.inveed.gwt.editor.client.model.EntityManager;
-import net.inveed.gwt.editor.client.utils.ErrorWindow;
 import net.inveed.gwt.editor.client.utils.IError;
 import net.inveed.gwt.editor.client.utils.JsonHelper;
 import net.inveed.gwt.editor.client.utils.Promise;
 import net.inveed.gwt.editor.client.utils.QuestionWindow;
-import net.inveed.gwt.editor.shared.UIConstants;
+import net.inveed.gwt.editor.commons.UIConstants;
+import net.inveed.gwt.editor.shared.lists.ListViewDTO;
 
 public abstract class EntityList extends Composite {
 	interface EntityListBinder extends UiBinder<Widget, EntityList> {
@@ -64,18 +63,15 @@ public abstract class EntityList extends Composite {
 	private EntityModel model;
 	private EntityListView view;
 	private EntityManager entityManager;
-
-	ListDataProvider<JSEntity> dataProvider;
-
-	@UiField Heading title;
-	@UiField Button btnAdd;
-	@UiField Button btnReload;
-	@UiField Pagination pagination;
-	@UiField ButtonGroup bgRight;
-	@UiField protected CellTable<JSEntity> grid;
 	
-	private SimplePager pager = new SimplePager();
-
+	//MaterialIcon btnAdd;
+	//MaterialIcon btnReload;
+	@UiField protected MaterialDataTable<JSEntity> grid;
+	
+	private MaterialPanel toolPanel;
+	private MaterialPanel infoPanel;
+	private MaterialLabel title;
+	
 	public EntityListView getView() {
 		return this.view;
 	}
@@ -86,31 +82,71 @@ public abstract class EntityList extends Composite {
 
 	public EntityList() {
 		initWidget(uiBinder.createAndBindUi(this));
-		this.dataProvider = new ListDataProvider<>();
-		this.grid.addRangeChangeHandler(new RangeChangeEvent.Handler() {
+		
+		this.grid.addRowDoubleClickHandler(new RowDoubleClickHandler<JSEntity>() {
+			
 			@Override
-			public void onRangeChange(final RangeChangeEvent event) {
-				pagination.rebuild(pager);
+			public void onRowDoubleClick(RowDoubleClickEvent<JSEntity> event) {
+				if (event.getModel() == null) {
+					return;
+				}
+				openExistingItemEditor(event.getModel());
 			}
 		});
-
-		this.pager.setDisplay(this.grid);
-		this.pagination.clear();
-		this.grid.setPageSize(20);
+		this.grid.setShadow(0);
+		this.grid.getScaffolding().getInfoPanel().clear();
+		this.grid.getScaffolding().getTopPanel().clear();
+		this.toolPanel = new MaterialPanel();
+		this.toolPanel.setStyleName("tool-panel");
+		
+		this.infoPanel = new MaterialPanel();
+		this.infoPanel.setStyleName("info-panel");
+		
+		this.title = new MaterialLabel();
+		this.infoPanel.add(this.title);
+		
+		this.grid.getScaffolding().getTopPanel().add(this.infoPanel);
+		this.grid.getScaffolding().getTopPanel().add(this.toolPanel);
 	}
 	
-	public void setPageSize(int size) {
-		this.grid.setPageSize(size);
+	public void setAbsolutHeight(int h) {
+		this.grid.getScaffolding().getTopPanel().setHeight("40px");
+		this.grid.getScaffolding().getTopPanel().getElement().getStyle().setPaddingTop(8, Unit.PX);
+		this.grid.getScaffolding().getTopPanel().getElement().getStyle().setPaddingBottom(3, Unit.PX);
+		
+		this.grid.getElement().getStyle().setHeight((h + 40), Unit.PX);
+		this.grid.getScaffolding().getTableBody().setHeight(h + "px");
 	}
 	
-	public int getPageSize() {
-		return this.grid.getPageSize();
+	public void setShadow(int v) {
+		this.grid.setShadow(v);
+	}
+	
+	protected void setTableTitle(String displayName) {
+		this.setTableTitle(displayName, "1.2em");
+	}
+	
+	protected void setTableTitle(String displayName, String size) {
+		this.title.setText(displayName);
+		this.title.setFontSize(size);
 	}
 
+	
 	public void bind(EntityModel model, EntityManager em, String viewName) {
 		this.model = model;
 		this.entityManager = em;
-		this.view = model.getListView(viewName);
+		if (model.getListViews() == null) {
+			throw new NullPointerException("listViews");
+		}
+		ListViewDTO dto = model.getListViews().get(viewName);
+		if (dto == null) {
+			dto = model.getListViews().get(UIConstants.VIEWS_ALL);
+		}
+		if (dto == null) {
+			//TODO: error
+			return;
+		}
+		this.view = new EntityListView(model, dto, viewName);
 		addCreateIcon();
 	}
 
@@ -128,106 +164,54 @@ public abstract class EntityList extends Composite {
 
 	public void initialize() {
 		LOG.fine("Initializing entity list");
-		ArrayList<PropertyInView> displayFields = new ArrayList<>();
+		ArrayList<ListViewColumn<?>> displayColumns = new ArrayList<>();
 
-		for (PropertyInView f : view.getProperties()) {
-			if (this.excludedProperties.containsKey(f.property.getName())) {
+		for (ListViewColumn<?> col : view.getColumns()) {
+			if (this.excludedProperties.containsKey(col.getPropertyDescriptor().getName())) {
 				continue;
 			}
-			displayFields.add(f); // TODO: добавлять только если должны отображаться в таблице
+			displayColumns.add(col); // TODO: добавлять только если должны отображаться в таблице
 		}
-
-		displayFields.sort(new Comparator<PropertyInView>() {
-
-			@Override
-			public int compare(PropertyInView o1, PropertyInView o2) {
-				int o1Order = o1.order;
-				int o2Order = o2.order;
-				if (o1Order < o2Order) {
-					return -1;
-				} else if (o1Order > o2Order) {
-					return 1;
-				}
-				return o1.getDisplayName().compareTo(o2.getDisplayName());
-			}
-		});
 
 		this.addLeftSideColumns();
 
-		for (PropertyInView f : displayFields) {
-			LOG.fine("Adding column for field " + f.property.getName());
+		for (ListViewColumn<?> c : displayColumns) {
+			LOG.fine("Adding column for field " + c.getPropertyDescriptor().getName());
 
-			Column<JSEntity, ?> col = f.property.createTableColumn();
-			if (f.width > 0) {
+			Column<JSEntity, ?> col = UIRegistry.INSTANCE.createListViewColumn(c);
+			if (c.getDto().width != null && c.getDto().width > 0) {
 				// col.setMinimumWidth(f.width);
 			}
-			String colName = f.getDisplayName();
+			String colTitle = c.getDisplayName();
 
-			LOG.fine("Adding column with name " + colName);
-			this.grid.addColumn(col, colName);
+			LOG.fine("Adding column with name " + colTitle);
+			this.grid.addColumn(col, colTitle);
 		}
 
 		this.addRightSideColumns();
-
-		this.dataProvider.addDataDisplay(this.grid);
+		this.grid.getView().setRedraw(true);
+		this.grid.getView().refresh();
 	}
 
 	protected void addRightSideColumns() {
-
-		Column<JSEntity, String> colEdit = new Column<JSEntity, String>(
-				new ButtonCell(ButtonType.DEFAULT, IconType.EDIT)) {
-
+		WidgetColumn<JSEntity, Widget> deleteColumn = new WidgetColumn<JSEntity, Widget>() {
+			
 			@Override
-			public String getValue(JSEntity object) {
-				return null;
-			}
-
-			@Override
-			public void render(Context context, JSEntity entity, SafeHtmlBuilder sb) {
-				if (!entity.canEdit()) {
-					sb.appendHtmlConstant("<div/>");
-				}
-				super.render(context, entity, sb);
-			}
-		};
-		colEdit.setCellStyleNames("grid-cell-btn");
-
-		colEdit.setFieldUpdater(new FieldUpdater<JSEntity, String>() {
-
-			@Override
-			public void update(int index, JSEntity object, String value) {
-				openExistingItemEditor(object);
-			}
-		});
-
-		Column<JSEntity, String> colDelete = new Column<JSEntity, String>(
-				new ButtonCell(ButtonType.DEFAULT, IconType.RECYCLE)) {
-
-			@Override
-			public String getValue(JSEntity object) {
-				return null;
-			}
-
-			@Override
-			public void render(Context context, JSEntity entity, SafeHtmlBuilder sb) {
-				if (!entity.canDelete()) {
-					sb.appendHtmlConstant("<div/>");
-				}
-				super.render(context, entity, sb);
+			public Widget getValue(JSEntity object) {
+				MaterialButton btn = new MaterialButton(ButtonType.FLAT);
+				btn.setIconType(IconType.DELETE);
+				btn.setBorder("none");
+				btn.addClickHandler(new ClickHandler() {
+					@Override
+					public void onClick(ClickEvent event) {
+						deleteSelectedItem(object);
+					}
+				});
+				return btn;
 			}
 		};
-		colDelete.setFieldUpdater(new FieldUpdater<JSEntity, String>() {
-
-			@Override
-			public void update(int index, JSEntity object, String value) {
-				deleteSelectedItem(object);
-			}
-		});
-
-		colDelete.setCellStyleNames("grid-cell-btn");
-
-		this.grid.addColumn(colEdit);
-		this.grid.addColumn(colDelete);
+		deleteColumn.setWidth("40px");
+		this.grid.addColumn(deleteColumn);
 	}
 
 	protected void addLeftSideColumns() {
@@ -239,13 +223,16 @@ public abstract class EntityList extends Composite {
 			return;
 		}
 		if (!item.canDelete()) {
-			String msg = JsonHelper.safeGetString(Localizer.INSTANCE.getMessage("errors.cannotDelete"));
-			Notify.notify(msg, NotifyType.DANGER);
+			String msg = JsonHelper.safeGetString(Localizer.INSTANCE.getMessage1("errors.cannotDelete"));
+			MaterialToast.fireToast(msg, 2000);
 			return;
 		}
 
 		Promise<Boolean, IError> p = QuestionWindow
-				.open("You're going to delete '" + item.getDisplayValue() + "'. \r\nContinue?");
+				.open("Delete object", 
+						"You're going to delete '" + item.getDisplayValue() + "'. \r\nContinue?",
+						Color.RED_LIGHTEN_3);
+		
 		p.thenApply((response) -> {
 			if (response) {
 				this.deleteSelectedItemsConfirmed(item);
@@ -255,14 +242,18 @@ public abstract class EntityList extends Composite {
 	}
 
 	private void addCreateIcon() {
-
+		
+		MaterialIcon btnAdd = new MaterialIcon(IconType.ADD);
+		this.toolPanel.add(btnAdd);
+		
 		List<EntityModel> validTypes = this.model.getInstantiableTypes();
 		if (validTypes.size() == 0) {
 			return;
 		}
 
 		if (validTypes.size() == 1) {
-			this.btnAdd.addClickHandler(new ClickHandler() {
+			
+			btnAdd.addClickHandler(new ClickHandler() {
 
 				@Override
 				public void onClick(ClickEvent event) {
@@ -270,15 +261,14 @@ public abstract class EntityList extends Composite {
 				}
 			});
 		} else {
-			this.btnAdd.removeFromParent();
-			ButtonGroup ddg = new ButtonGroup();
-			bgRight.insert(ddg, 0);
-			ddg.add(this.btnAdd);
-			this.btnAdd.setDataToggle(Toggle.DROPDOWN);
-			DropDownMenu ddm = new DropDownMenu();
-			ddg.add(ddm);
+			MaterialDropDown dd = new MaterialDropDown();
+			dd.setConstrainWidth(false);
+			String uid = DOM.createUniqueId();
+			btnAdd.setActivates(uid);
+			dd.setActivator(uid);
+			
 			for (EntityModel vm : validTypes) {
-				AnchorListItem i = new AnchorListItem(vm.getDisplayName(null));
+				MaterialLink i = new MaterialLink(vm.getDisplayName(null));
 				i.addClickHandler(new ClickHandler() {
 
 					@Override
@@ -286,10 +276,20 @@ public abstract class EntityList extends Composite {
 						openNewItemEditor(vm);
 					}
 				});
-				ddm.add(i);
+				dd.add(i);
 			}
+			this.toolPanel.add(dd);
 
 		}
+		MaterialIcon btnReload = new MaterialIcon(IconType.REFRESH);
+		this.toolPanel.add(btnReload);
+		
+		btnReload.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				refresh();
+			}
+		});
 	}
 
 	private void deleteSelectedItemsConfirmed(JSEntity item) {
@@ -323,18 +323,17 @@ public abstract class EntityList extends Composite {
 				problemEntities.add((JSEntity) ri.request.getContext());
 			}
 		}
-
-		ErrorWindow.open("Cannot delete items");
+		MaterialToast.fireToast("Cannot delete object");
 	}
 
 	protected void onDeleteComplete() {
-		Notify.notify("Item deleted");
+		MaterialToast.fireToast("Object deleted");
 		this.refresh();
 	}
 
 	protected void openExistingItemEditor(JSEntity entity) {
-		EntityEditorDialog dialog = new EntityEditorDialog(entity);
-		Promise<Boolean, IError> p = dialog.show(UIConstants.FORM_EDIT);
+		EntityEditorDialog dialog = new EntityEditorDialog(entity, UIConstants.FORM_EDIT);
+		Promise<Boolean, IError> p = dialog.show();
 		p.thenApply((Boolean v) -> {
 			if (v != null) {
 				if (v) {
@@ -351,12 +350,17 @@ public abstract class EntityList extends Composite {
 
 	protected Void fill(List<JSEntity> list) {
 		LOG.fine("Array found, size = " + list.size());
-
-		this.dataProvider.getList().clear();
-		this.dataProvider.getList().addAll(list);
-		this.dataProvider.flush();
 		
-		this.pagination.rebuild(this.pager);
+		//this.dataProvider = new ListDataSource<>();
+		//this.dataProvider.add(0, list);
+		this.grid.clearRowsAndCategories(true);
+		this.grid.setTotalRows(0);
+		//this.grid.setDataSource(this.dataProvider);
+		this.grid.setRowData(0, list);
+		this.grid.getView().setRedraw(true);
+		this.grid.getView().refresh();
+		
+		//this.pagination.rebuild(this.pager);
 
 		LOG.fine("Fill finished");
 		return null;

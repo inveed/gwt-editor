@@ -51,8 +51,5 @@ public class EntityAccessServiceDTO implements Serializable{
 		this.argPage = pageArg;
 		this.argPageSize = pageSizeArg;
 		this.createArgs = createArgs;
-		
 	}
-	
-	
 }

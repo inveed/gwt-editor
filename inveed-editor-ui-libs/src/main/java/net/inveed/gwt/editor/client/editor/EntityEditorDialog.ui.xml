@@ -1,12 +1,15 @@
-<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
-	xmlns:g="urn:import:com.google.gwt.user.client.ui" 
-	xmlns:b="urn:import:org.gwtbootstrap3.client.ui">
+<ui:UiBinder xmlns:ui='urn:ui:com.google.gwt.uibinder'
+	xmlns:g="urn:import:com.google.gwt.user.client.ui"
+	xmlns:m='urn:import:gwt.material.design.client.ui'
+	xmlns:ma="urn:import:gwt.material.design.addins.client">
 
-	<b:Modal ui:field="modal" b:id="modal" closable="true" fade="true" dataBackdrop="STATIC" dataKeyboard="true" width="60%">
-		<b:ModalBody ui:field="content" />
-		<b:ModalFooter>
-			<b:Button ui:field="btnOk" type="PRIMARY">Save</b:Button>
-			<b:Button ui:field="btnCancel" type="DANGER" dataDismiss="MODAL">Close</b:Button>
-		</b:ModalFooter>
-	</b:Modal>
+	<m:MaterialDialog ui:field="modal" width="60%">
+		<m:MaterialDialogContent ui:field="dc">
+			<m:MaterialPanel ui:field="content"/>
+		</m:MaterialDialogContent>
+		<m:MaterialDialogFooter>
+			<m:MaterialButton ui:field="btnOk" text="Save" textColor="WHITE" backgroundColor="GREEN" type="FLAT"></m:MaterialButton>
+			<m:MaterialButton ui:field="btnCancel" text="Cancel" type="FLAT"></m:MaterialButton>
+		</m:MaterialDialogFooter>
+	</m:MaterialDialog>
 </ui:UiBinder>
