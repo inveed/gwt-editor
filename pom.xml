@@ -4,7 +4,7 @@
 	<groupId>net.inveed</groupId>
 	<artifactId>inveed-editor-root</artifactId>
 	<packaging>pom</packaging>
-	<version>0.0.4-SNAPSHOT</version>
+	<version>0.0.4</version>
 	<name>Inveed Reflection-Inject Root Project</name>
 	<description>GWT-based data editor libs</description>
 	<url>https://github.com/inveed/gwt-editor</url>
@@ -19,7 +19,7 @@
 	</modules>
 
 	<properties>
-		<global.version>0.0.4-SNAPSHOT</global.version>
+		<global.version>0.0.4</global.version>
 		<json-jpa-version>0.0.4</json-jpa-version>
 		<jsonrpc-version>0.0.3</jsonrpc-version>
 		<jackson-version>2.9.7</jackson-version>
@@ -32,7 +32,7 @@
 		<url>https://github.com/inveed/gwt-editor</url>
 		<connection>scm:git:git://github.com/inveed/gwt-editor.git</connection>
 		<developerConnection>scm:git:git@github.com:inveed/gwt-editor.git</developerConnection>
-		<tag>HEAD</tag>
+		<tag>v0.0.4</tag>
 	</scm>
 
 	<!-- Maven build settings -->
